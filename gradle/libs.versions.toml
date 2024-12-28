@@ -13,6 +13,8 @@ kotlinInject-anvil = "0.1.0"
 kotlinx-coroutines = "1.9.0"
 lifecycleRuntimeKtx = "2.8.7"
 sqldelight = "2.0.2"
+moshi = "1.15.2"
+moshiX = "0.29.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -22,6 +24,7 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-plugin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version = "2.0.21-1.0.27" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+poko = "dev.drewhamilton.poko:0.18.1"
 
 
 [libraries]
@@ -55,3 +58,14 @@ kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-androi
 sqldelight-driver-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-async = { module = "app.cash.sqldelight:async-extensions", version.ref = "sqldelight" }
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+
+square-retrofit-bom = { module = "com.squareup.retrofit2:retrofit-bom", version = "2.11.0" }
+square-retrofit = { module = "com.squareup.retrofit2:retrofit" }
+square-retrofit-moshi = { module = "com.squareup.retrofit2:converter-moshi" }
+square-moshi = { module = "com.squareup.moshi:moshi", version.ref = "moshi" }
+square-moshiKotlin = { module = "com.squareup.moshi:moshi-kotlin-codegen", version.ref = "moshi" }
+square-moshiAdapters = { module = "dev.zacsweers.moshix:moshi-adapters", version.ref = "moshiX" }
+square-moshiSealed = { module = "dev.zacsweers.moshix:moshi-sealed-runtime", version.ref = "moshiX" }
+square-moshiSealedCodegen = { module = "dev.zacsweers.moshix:moshi-sealed-codegen", version.ref = "moshiX" }
+
+sqkon = "com.mercury.sqkon:library-android:1.0.0-alpha01"

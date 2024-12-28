@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.buildConfig)
+    alias(libs.plugins.poko)
 }
 
 kotlin {
@@ -116,4 +117,15 @@ dependencies {
     implementation(libs.sqldelight.async)
     implementation(libs.sqldelight.coroutines)
     implementation(libs.sqldelight.driver.android)
+
+    implementation(platform(libs.square.retrofit.bom))
+    implementation(libs.square.retrofit)
+    implementation(libs.square.retrofit.moshi)
+    implementation(libs.square.moshi)
+    ksp(libs.square.moshiKotlin)
+    implementation(libs.square.moshiAdapters)
+    implementation(libs.square.moshiSealed)
+    ksp(libs.square.moshiSealedCodegen)
+
+    implementation(libs.sqkon)
 }
