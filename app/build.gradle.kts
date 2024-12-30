@@ -11,7 +11,10 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
+    jvmToolchain{
+        languageVersion = JavaLanguageVersion.of(libs.versions.jvmTarget.get().toInt())
+        vendor = JvmVendorSpec.AZUL
+    }
 
     compilerOptions {
         progressiveMode = true
