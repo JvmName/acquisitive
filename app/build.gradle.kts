@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.buildConfig)
     alias(libs.plugins.poko)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -113,6 +114,7 @@ dependencies {
 
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.coroutines)
+    implementation(libs.kotlinx.serialization)
 
     implementation(libs.sqldelight.async)
     implementation(libs.sqldelight.coroutines)

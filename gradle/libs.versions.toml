@@ -22,7 +22,8 @@ buildConfig = { id = "com.github.gmazzo.buildconfig", version = "5.5.0" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-plugin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version = "2.0.21-1.0.27" }
+kotlin-serialization = "org.jetbrains.kotlin.plugin.serialization:2.1.0"
+ksp = { id = "com.google.devtools.ksp", version = "2.1.0-1.0.29" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 poko = "dev.drewhamilton.poko:0.18.1"
 
@@ -54,6 +55,7 @@ kotlinInject-anvil-runtime-optional = { module = "software.amazon.lastmile.kotli
 
 kotlinx-datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.6.1"
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
 
 sqldelight-driver-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-async = { module = "app.cash.sqldelight:async-extensions", version.ref = "sqldelight" }
