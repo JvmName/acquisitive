@@ -6,6 +6,14 @@ dependencyResolutionManagement {
         mavenCentral()
         google()
         maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        exclusiveContent {
+            forRepository{
+                maven("https://jitpack.io")
+            }
+            filter {
+                includeModule("com.github.requery", "sqlite-android")
+            }
+        }
     }
 }
 

@@ -8,8 +8,9 @@ import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 
-@ContributesBinding(AppScope::class, boundType = JsonAdapter::class, multibinding = true)
-class InstantAdapter @Inject constructor() : JsonAdapter<Instant>() {
+
+
+object InstantAdapter : JsonAdapter<Instant>() {
     override fun fromJson(reader: JsonReader): Instant {
         return Instant.fromEpochSeconds(reader.nextLong())
     }

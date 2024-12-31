@@ -3,6 +3,8 @@ package dev.jvmname.acquisitive.network
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import dev.jvmname.acquisitive.network.adapters.IdAdapter
+import dev.jvmname.acquisitive.network.adapters.InstantAdapter
+import kotlinx.datetime.Instant
 import me.tatarka.inject.annotations.Inject
 import me.tatarka.inject.annotations.Provides
 import okhttp3.OkHttpClient
@@ -13,9 +15,9 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 import kotlin.reflect.KClass
 
 @[Provides SingleIn(AppScope::class)]
-fun providesMoshi(adapters: Set<JsonAdapter<*>>): Moshi {
+fun providesMoshi(): Moshi {
     return Moshi.Builder()
-        .apply { adapters.forEach(::add) }
+        .add(Instant::class.java, InstantAdapter)
         .add(IdAdapter.create())
         .build()
 }

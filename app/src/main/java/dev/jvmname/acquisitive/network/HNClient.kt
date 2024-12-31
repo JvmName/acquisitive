@@ -11,6 +11,8 @@ import dev.jvmname.acquisitive.util.fetchAsync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.tatarka.inject.annotations.Inject
+import software.amazon.lastmile.kotlin.inject.anvil.AppScope
+import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 
 
 abstract class HnClient {
@@ -18,13 +20,25 @@ abstract class HnClient {
     protected suspend fun <T> wrap(call: suspend () -> T): T {
         return withContext(Dispatchers.IO) { call() }
     }
+
+    abstract suspend fun getStories(mode: FetchMode): ItemIdArray
+    abstract suspend fun getChildren(item: HnItem): Pair<HnItem, List<HnItem>>
+    abstract suspend fun getTopStories(): ItemIdArray
+    abstract suspend fun getNewStories(): ItemIdArray
+    abstract suspend fun getShowStories(): ItemIdArray
+    abstract suspend fun getAskStories(): ItemIdArray
+    abstract suspend fun getJobStories(): ItemIdArray
+    abstract suspend fun getBestStories(): ItemIdArray
+    abstract suspend fun getItem(id: ItemId): HnItem
+    abstract suspend fun getUser(id: UserId): User?
 }
 
+@ContributesBinding(AppScope::class)
 class RealHnClient @Inject constructor(factory: RetrofitFactory) : HnClient() {
     private val storyClient = factory.create<HnStoryApi>("https://hacker-news.firebaseio.com/v0/")
 //    private val userClient = factory.create<HnUserApi>("https://news.ycombinator.com/")
 
-    suspend fun getStories(mode: FetchMode): ItemIdArray {
+    override suspend fun getStories(mode: FetchMode): ItemIdArray {
         return when (mode) {
             FetchMode.TOP -> getTopStories()
             FetchMode.NEW -> getNewStories()
@@ -35,46 +49,46 @@ class RealHnClient @Inject constructor(factory: RetrofitFactory) : HnClient() {
         }
     }
 
-    suspend fun getChildren(item: HnItem): Pair<HnItem, List<HnItem>> {
+    override suspend fun getChildren(item: HnItem): Pair<HnItem, List<HnItem>> {
         return item to item.kids.orEmpty()
             .fetchAsync { getItem(it) }
     }
 
-    suspend fun getTopStories(): ItemIdArray {
+    override suspend fun getTopStories(): ItemIdArray {
         return wrap { storyClient.getTopStories() }
             ?: emptyItemIdArray()
     }
 
-    suspend fun getNewStories(): ItemIdArray {
+    override suspend fun getNewStories(): ItemIdArray {
         return wrap { storyClient.getNewStories() }
             ?: emptyItemIdArray()
     }
 
-    suspend fun getShowStories(): ItemIdArray {
+    override suspend fun getShowStories(): ItemIdArray {
         return wrap { storyClient.getShowStories() }
             ?: emptyItemIdArray()
     }
 
-    suspend fun getAskStories(): ItemIdArray {
+    override suspend fun getAskStories(): ItemIdArray {
         return wrap { storyClient.getAskStories() }
             ?: emptyItemIdArray()
     }
 
-    suspend fun getJobStories(): ItemIdArray {
+    override suspend fun getJobStories(): ItemIdArray {
         return wrap { storyClient.getJobStories() }
             ?: emptyItemIdArray()
     }
 
-    suspend fun getBestStories(): ItemIdArray {
+    override suspend fun getBestStories(): ItemIdArray {
         return wrap { storyClient.getBestStories() }
             ?: emptyItemIdArray()
     }
 
-    suspend fun getItem(id: ItemId): HnItem {
+    override suspend fun getItem(id: ItemId): HnItem {
         return wrap { storyClient.getItem(id) }
     }
 
-    suspend fun getUser(id: UserId): User? {
+    override suspend fun getUser(id: UserId): User? {
         return wrap { storyClient.getUser(id) }
     }
 

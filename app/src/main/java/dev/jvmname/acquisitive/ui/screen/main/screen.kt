@@ -1,39 +1,31 @@
-package dev.jvmname.acquisitive.ui.screen
+package dev.jvmname.acquisitive.ui.screen.main
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.material.TextButton
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.slack.circuit.runtime.CircuitUiState
+import com.slack.circuit.runtime.screen.Screen
+import dev.jvmname.acquisitive.network.model.FetchMode
+import dev.jvmname.acquisitive.ui.types.HnScreenItem
+import kotlinx.parcelize.Parcelize
 
 private val MIN_ITEM_HEIGHT = 200.dp
+
+@Parcelize
+data class MainScreen(val fetchMode: FetchMode = FetchMode.TOP) : Screen {
+
+    data class MainState(val stories: List<HnScreenItem>) : CircuitUiState
+}
 
 
 @Composable
 fun MainListItem(
-    modifier: Modifier = Modifier,
-    title: String,
-    isHot: Boolean,
-    rank: Int,
-    score: Int,
-    urlHost: String,
-    numChildren: Int,
-    time: String,
-    author: String,
-    icon: ImageVector?,
-    onItemClick: ()
+    state: MainScreen.MainState,
+    modifier: Modifier,
 ) {
     //TODO size, color, etc.
-    OutlinedCard(modifier = modifier) {
+  /*  OutlinedCard(modifier = modifier) {
         Row(horizontalArrangement = Arrangement.Start) {
 
             //ranking
@@ -69,20 +61,21 @@ fun MainListItem(
             }
         }
 
-    }
+    }*/
 }
 
 
-@[Preview Composable]
-fun PreviewMainListItem() {
-    MainListItem(
-        title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
-        isHot = false,
-        rank = 2,
-        score = 950,
-        numChildren = 100,
-        time = "19h",
-        author = "JvmName",
-        icon = null
-    )
-}
+//@[Preview Composable]
+//fun PreviewMainListItem() {
+//    MainListItem(
+//        title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
+//        isHot = false,
+//        rank = 2,
+//        score = 950,
+//        numChildren = 100,
+//        time = "19h",
+//        author = "JvmName",
+//        icon = null,
+//        urlHost = "github.com"
+//    )
+//}

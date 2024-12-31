@@ -2,6 +2,7 @@ package dev.jvmname.acquisitive.network.model
 
 import com.squareup.moshi.JsonClass
 import dev.drewhamilton.poko.Poko
+import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.zacsweers.moshix.sealed.annotations.TypeLabel
 import kotlinx.datetime.Instant
 
@@ -15,7 +16,7 @@ sealed class HnItem(val id: ItemId) {
     abstract val time: Instant
     abstract val dead: Boolean?
     abstract val deleted: Boolean?
-    abstract val kids: List<ItemId>?
+    abstract val kids: ItemIdArray?
 
     @[Poko TypeLabel("story") JsonClass(generateAdapter = true)]
     class Story(
@@ -24,10 +25,10 @@ sealed class HnItem(val id: ItemId) {
         override val time: Instant,
         override val dead: Boolean? = null,
         override val deleted: Boolean? = null,
-        override val kids: List<ItemId>? = null,
+        override val kids: ItemIdArray? = null,
         val title: String,
         val url: String?,
-        val score: Int?,
+        val score: Int,
         val descendants: Int?,
         val text: String?,
     ) : HnItem(id)
@@ -39,7 +40,7 @@ sealed class HnItem(val id: ItemId) {
         override val time: Instant,
         override val dead: Boolean? = null,
         override val deleted: Boolean? = null,
-        override val kids: List<ItemId>? = null,
+        override val kids: ItemIdArray? = null,
         val text: String?,
         val parent: Int,
     ) : HnItem(id)
@@ -51,11 +52,11 @@ sealed class HnItem(val id: ItemId) {
         override val time: Instant,
         override val dead: Boolean? = null,
         override val deleted: Boolean? = null,
-        override val kids: List<ItemId>? = null,
+        override val kids: ItemIdArray? = null,
         val title: String,
         val text: String?,
         val url: String?,
-        val score: Int?,
+        val score: Int,
     ) : HnItem(id)
 
     @[Poko TypeLabel("poll") JsonClass(generateAdapter = true)]
@@ -65,11 +66,11 @@ sealed class HnItem(val id: ItemId) {
         override val time: Instant,
         override val dead: Boolean? = null,
         override val deleted: Boolean? = null,
-        override val kids: List<ItemId>? = null,
+        override val kids: ItemIdArray? = null,
         val title: String,
         val text: String?,
-        val parts: List<Int>,
-        val score: Int?,
+        val parts: ItemIdArray,
+        val score: Int,
         val descendants: Int?,
     ) : HnItem(id)
 
@@ -80,12 +81,21 @@ sealed class HnItem(val id: ItemId) {
         override val time: Instant,
         override val dead: Boolean? = null,
         override val deleted: Boolean? = null,
-        override val kids: List<ItemId>? = null,
-        val poll: Int,
+        override val kids: ItemIdArray? = null,
+        val poll: ItemId,
         val text: String?,
-        val score: Int?,
+        val score: Int,
     ) : HnItem(id)
 }
+
+val HnItem.score: Int
+    get() = when (this) {
+        is HnItem.Comment -> 0
+        is HnItem.Job -> score
+        is HnItem.Poll -> score
+        is HnItem.PollOption -> score
+        is HnItem.Story -> score
+    }
 
 fun HnItem.getDisplayedTitle() = when (this) {
     is HnItem.Comment -> text.orEmpty()
@@ -101,7 +111,7 @@ fun HnItem.copy(
     time: Instant = this.time,
     dead: Boolean? = this.dead,
     deleted: Boolean? = this.deleted,
-    kids: List<ItemId>? = this.kids
+    kids: ItemIdArray? = this.kids,
 ) = when (this) {
     is HnItem.Story -> HnItem.Story(
         id = id,
@@ -116,6 +126,7 @@ fun HnItem.copy(
         descendants = descendants,
         text = text
     )
+
     is HnItem.Comment -> HnItem.Comment(
         id = id,
         by = by,
@@ -126,6 +137,7 @@ fun HnItem.copy(
         text = text,
         parent = parent
     )
+
     is HnItem.Job -> HnItem.Job(
         id = id,
         by = by,
@@ -138,6 +150,7 @@ fun HnItem.copy(
         url = url,
         score = score
     )
+
     is HnItem.Poll -> HnItem.Poll(
         id = id,
         by = by,
@@ -151,6 +164,7 @@ fun HnItem.copy(
         score = score,
         descendants = descendants
     )
+
     is HnItem.PollOption -> HnItem.PollOption(
         id = id,
         by = by,

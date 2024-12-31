@@ -1,8 +1,11 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package dev.jvmname.acquisitive.util
 
 import dev.jvmname.acquisitive.network.model.ItemId
+import kotlinx.serialization.Serializable
 
-@JvmInline
+@[JvmInline Serializable(with = ItemIdArraySerializer::class)]
 value class ItemIdArray
 @PublishedApi internal constructor(@PublishedApi internal val storage: IntArray) :
     Collection<ItemId> {
