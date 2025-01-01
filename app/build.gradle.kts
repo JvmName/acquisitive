@@ -11,7 +11,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain{
+    jvmToolchain {
         languageVersion = JavaLanguageVersion.of(libs.versions.jvmTarget.get().toInt())
         vendor = JvmVendorSpec.AZUL
     }
@@ -88,6 +88,12 @@ android {
     }
 }
 
+ksp {
+    arg("circuit.codegen.mode", "kotlin_inject_anvil")
+//    arg("me.tatarka.inject.dumpGraph", "true")
+    arg("kotlin-inject-anvil-contributing-annotations", "com.slack.circuit.codegen.annotations.CircuitInject")
+}
+
 dependencies {
     modules {
         module("com.google.guava:listenablefuture") { replacedBy("com.google.guava:guava") }
@@ -110,6 +116,9 @@ dependencies {
     implementation(libs.circuit.overlay)
     implementation(libs.circuitx.overlays)
     implementation(libs.circuitx.gestureNav)
+    implementation(libs.circuitx.android)
+    implementation(libs.circuit.annotations)
+    ksp(libs.circuit.codegen)
 
     implementation(libs.kotlinInject.runtime)
     implementation(libs.kotlinInject.anvil.runtime)

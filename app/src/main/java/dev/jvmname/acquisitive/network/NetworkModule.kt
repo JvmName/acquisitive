@@ -11,40 +11,45 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
+import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 import kotlin.reflect.KClass
 
-@[Provides SingleIn(AppScope::class)]
-fun providesMoshi(): Moshi {
-    return Moshi.Builder()
-        .add(Instant::class.java, InstantAdapter)
-        .add(IdAdapter.create())
-        .build()
-}
+@ContributesTo(AppScope::class)
+interface NetworkComponent {
+    @[Provides SingleIn(AppScope::class)]
+    fun providesMoshi(): Moshi {
+        return Moshi.Builder()
+            .add(Instant::class.java, InstantAdapter)
+            .add(IdAdapter.create())
+            .build()
+    }
 
-@Provides
-fun provideMoshiConverterFactory(moshi: Moshi) = MoshiConverterFactory.create(moshi)
+    @Provides
+    fun provideMoshiConverterFactory(moshi: Moshi) = MoshiConverterFactory.create(moshi)
 
 @Provides
 fun provideOkhttpClient(): OkHttpClient {
-    return OkHttpClient.Builder()
-        .build()
+return OkHttpClient.Builder()
+    .build()
 }
 
 
-@SingleIn(AppScope::class)
-class RetrofitFactory @Inject constructor(
-    private val okhttp: () -> OkHttpClient,
-    private val moshiConverterFactory: MoshiConverterFactory,
-) {
-    fun <T : Any> create(baseURL: String, clazz: KClass<T>): T {
-        return Retrofit.Builder()
-            .baseUrl(baseURL)
-            .addConverterFactory(moshiConverterFactory)
-            .validateEagerly(true)
-            .callFactory { request -> okhttp().newCall(request) }
-            .build()
-            .create(clazz.java)
+    @[Inject SingleIn(AppScope::class)]
+    class RetrofitFactory(
+        private val okhttp: () -> OkHttpClient,
+        private val moshiConverterFactory: MoshiConverterFactory,
+    ) {
+        fun <T : Any> create(baseURL: String, clazz: KClass<T>): T {
+            return Retrofit.Builder()
+                .baseUrl(baseURL)
+                .addConverterFactory(moshiConverterFactory)
+                .validateEagerly(true)
+                .callFactory { request -> okhttp().newCall(request) }
+                .build()
+                .create(clazz.java)
+        }
+
+        inline fun <reified T : Any> create(baseURL: String): T = create(baseURL, T::class)
     }
-    inline fun <reified T : Any> create(baseURL: String): T = create(baseURL, T::class)
 }

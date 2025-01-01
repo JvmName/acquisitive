@@ -13,8 +13,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.slack.circuit.backstack.rememberSaveableBackStack
+import com.slack.circuit.foundation.CircuitCompositionLocals
+import com.slack.circuit.foundation.NavigableCircuitContent
+import com.slack.circuit.foundation.NavigatorDefaults
+import com.slack.circuit.foundation.rememberCircuitNavigator
+import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
+import com.slack.circuitx.gesturenavigation.GestureNavigationDecoration
 import dev.jvmname.acquisitive.di.AcqComponent
 import dev.jvmname.acquisitive.di.create
+import dev.jvmname.acquisitive.ui.screen.main.MainScreen
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,35 +36,27 @@ class MainActivity : ComponentActivity() {
         val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         val component = AcqComponent::class.create(
             contextDelegate = applicationContext,
-            coroutineScopeDelegate = scope
+            coroutineScopeDelegate = scope,
         )
 
-
         setContent {
-            AcquisitiveTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+            CircuitCompositionLocals(component.circuit) {
+                AcquisitiveTheme {
+                    val backstack = rememberSaveableBackStack(root = MainScreen())
+                    val navigator = rememberAndroidScreenAwareNavigator(
+                        rememberCircuitNavigator(backstack), // Decorated navigator
+                        this@MainActivity,
+                    )
+                    NavigableCircuitContent(
+                        navigator = navigator,
+                        backStack = backstack,
+                        decoration = GestureNavigationDecoration(
+                            fallback = NavigatorDefaults.DefaultDecoration,
+                            onBackInvoked = navigator::pop
+                        )
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AcquisitiveTheme {
-        Greeting("Android")
     }
 }

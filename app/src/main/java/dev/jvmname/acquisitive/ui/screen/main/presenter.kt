@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
@@ -27,8 +28,10 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toDateTimePeriod
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
+import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
-class MainScreenPresenter @Inject constructor(
+@[Inject CircuitInject(MainScreen::class, AppScope::class)]
+class MainScreenPresenter(
     private val repo: StoryItemRepo,
     @Assisted private val screen: MainScreen,
 ) : Presenter<MainScreen.MainState> {

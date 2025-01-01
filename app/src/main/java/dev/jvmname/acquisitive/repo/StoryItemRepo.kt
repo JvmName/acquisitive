@@ -44,7 +44,8 @@ private sealed interface StoryItemResult<T> {
 
 private typealias NetworkItem = StoryItemResult<HnItem>
 
-class StoryItemRepo @Inject constructor(
+@Inject
+class StoryItemRepo(
     skn: Sqkon,
     private val client: HnClient,
     @AppCrScope scope: CoroutineScope,

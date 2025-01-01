@@ -10,14 +10,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import me.tatarka.inject.annotations.Provides
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
+import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 
-@[Provides SingleIn(AppScope::class)]
-fun provideSqkon(@AppContext context: Context,
-                 @AppCrScope coroutineScope: CoroutineScope
-                 ): Sqkon {
-    return Sqkon(
-        context = context,
-        scope = coroutineScope
-    )
+@ContributesTo(AppScope::class)
+interface SqkonComponent {
+
+    @[Provides SingleIn(AppScope::class)]
+    fun provideSqkon(
+        @AppContext context: Context,
+        @AppCrScope coroutineScope: CoroutineScope,
+    ): Sqkon {
+        return Sqkon(
+            context = context,
+            scope = coroutineScope
+        )
+    }
 }

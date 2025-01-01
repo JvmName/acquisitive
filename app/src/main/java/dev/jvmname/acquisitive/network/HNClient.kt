@@ -33,8 +33,8 @@ abstract class HnClient {
     abstract suspend fun getUser(id: UserId): User?
 }
 
-@ContributesBinding(AppScope::class)
-class RealHnClient @Inject constructor(factory: RetrofitFactory) : HnClient() {
+@[Inject ContributesBinding(AppScope::class)]
+class RealHnClient (factory: NetworkComponent.RetrofitFactory) : HnClient() {
     private val storyClient = factory.create<HnStoryApi>("https://hacker-news.firebaseio.com/v0/")
 //    private val userClient = factory.create<HnUserApi>("https://news.ycombinator.com/")
 
