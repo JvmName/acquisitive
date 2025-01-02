@@ -1,4 +1,4 @@
-package dev.jvmname.acquisitive.ui.screen.main
+package dev.jvmname.acquisitive.ui.screen.mainlist
 
 import android.net.Uri
 import androidx.annotation.VisibleForTesting
@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.slack.circuit.codegen.annotations.CircuitInject
+import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
@@ -23,20 +24,19 @@ import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimePeriod
-import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toDateTimePeriod
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
-@[Inject CircuitInject(MainScreen::class, AppScope::class)]
+@[Inject CircuitInject(MainListScreen::class, AppScope::class)]
 class MainScreenPresenter(
     private val repo: StoryItemRepo,
-    @Assisted private val screen: MainScreen,
-) : Presenter<MainScreen.MainState> {
+    @Assisted private val screen: MainListScreen,
+    @Assisted private val navigator: Navigator,
+) : Presenter<MainListScreen.MainListState> {
     @Composable
-    override fun present(): MainScreen.MainState {
+    override fun present(): MainListScreen.MainListState {
         val now = remember { Clock.System.now() }
         val fetchMode by remember { mutableStateOf(screen.fetchMode) }
         val items by repo.observeStories(fetchMode)
@@ -45,8 +45,8 @@ class MainScreenPresenter(
         val screenItems = items.mapIndexed({ i, item ->
             val isHot = item.score >= fetchMode.hotThreshold
             val icon = when (item) {
-                is HnItem.Job -> Icons.Default.Work
-                is HnItem.Poll -> Icons.Default.Poll
+                is HnItem.Job -> "💼"
+                is HnItem.Poll -> "🗳️"
                 else -> null
             }
 
@@ -64,11 +64,15 @@ class MainScreenPresenter(
                 time = time,
                 urlHost = urlHost,
             )
-
         })
-
-
-        return MainScreen.MainState(screenItems)
+        return MainListScreen.MainListState(fetchMode, screenItems) { event ->
+            when (event) {
+                MainListEvent.AddComment -> navigator
+                MainListEvent.CommentsClick -> TODO()
+                MainListEvent.FavoriteClick -> TODO()
+                MainListEvent.UpvoteClick -> TODO()
+            }
+        }
     }
 
     companion object {
@@ -110,7 +114,7 @@ fun HnItem.toScreenItem(
     isHot: Boolean,
     time: String,
     urlHost: String?,
-    icon: ImageVector? = null,
+    icon: String? = null,
 ): HnScreenItem = when (this) {
     is HnItem.Comment -> HnScreenItem.CommentItem(
         text = text.orEmpty(),
@@ -137,6 +141,7 @@ fun HnItem.toScreenItem(
         time = time,
         author = by.orEmpty(),
         isDead = dead ?: false,
-        icon = icon
+        isDeleted = deleted ?: false,
+        titleSuffix = icon
     )
 }

@@ -4,15 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.text.AnnotatedString
 import com.slack.circuit.backstack.rememberSaveableBackStack
 import com.slack.circuit.foundation.CircuitCompositionLocals
 import com.slack.circuit.foundation.NavigableCircuitContent
@@ -22,7 +14,7 @@ import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
 import com.slack.circuitx.gesturenavigation.GestureNavigationDecoration
 import dev.jvmname.acquisitive.di.AcqComponent
 import dev.jvmname.acquisitive.di.create
-import dev.jvmname.acquisitive.ui.screen.main.MainScreen
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListScreen
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +34,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             CircuitCompositionLocals(component.circuit) {
                 AcquisitiveTheme {
-                    val backstack = rememberSaveableBackStack(root = MainScreen())
+                    val backstack = rememberSaveableBackStack(root = MainListScreen())
                     val navigator = rememberAndroidScreenAwareNavigator(
                         rememberCircuitNavigator(backstack), // Decorated navigator
                         this@MainActivity,

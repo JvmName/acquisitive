@@ -18,7 +18,8 @@ sealed interface HnScreenItem {
         val time: String,
         val author: String,
         val isDead: Boolean,
-        val icon: ImageVector?,
+        val isDeleted: Boolean,
+        val titleSuffix: String?,
     ) : HnScreenItem
 
     @Poko
