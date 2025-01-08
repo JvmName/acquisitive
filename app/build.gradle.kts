@@ -21,6 +21,8 @@ kotlin {
         optIn.addAll(
             "androidx.compose.material3.ExperimentalMaterial3Api",
             "androidx.compose.foundation.ExperimentalFoundationApi",
+            "kotlin.ExperimentalStdlibApi",
+            "kotlinx.coroutines.ExperimentalCoroutinesApi",
         )
         freeCompilerArgs.addAll(
             "-Xjsr305=strict",
@@ -42,13 +44,6 @@ kotlin {
 
 val aqVersionCode = providers.gradleProperty("aq_versioncode").map(String::toLong).get()
 val aqVersionName = providers.gradleProperty("aq_versionname").get()
-
-buildConfig {
-    packageName("dev.jvmname.acquisitive")
-    buildConfigField("String", "FS_VERSION_NAME", "\"$aqVersionName - $aqVersionCode\"")
-    buildConfigField("Long", "VERSION_CODE", aqVersionCode)
-    generateAtSync = true
-}
 
 android {
     namespace = "dev.jvmname.acquisitive"
@@ -75,6 +70,22 @@ android {
             )
         }
     }
+
+    applicationVariants.all variant@{
+        buildConfig {
+            generateAtSync = true
+            useKotlinOutput()
+            sourceSets.named(this@variant.name) {
+                className.set("BuildConfig")
+                packageName("dev.jvmname.acquisitive")
+                buildConfigField<Boolean>("DEBUG", this@variant.buildType.isDebuggable)
+                buildConfigField<String>("VERSION_NAME", "\"$aqVersionName - $aqVersionCode\"")
+                buildConfigField<Long>("VERSION_CODE", aqVersionCode)
+            }
+        }
+
+    }
+
     compileOptions {
         sourceCompatibility = libs.versions.jvmTarget.map(JavaVersion::toVersion).get()
         targetCompatibility = libs.versions.jvmTarget.map(JavaVersion::toVersion).get()
@@ -91,7 +102,10 @@ android {
 ksp {
     arg("circuit.codegen.mode", "kotlin_inject_anvil")
 //    arg("me.tatarka.inject.dumpGraph", "true")
-    arg("kotlin-inject-anvil-contributing-annotations", "com.slack.circuit.codegen.annotations.CircuitInject")
+    arg(
+        "kotlin-inject-anvil-contributing-annotations",
+        "com.slack.circuit.codegen.annotations.CircuitInject"
+    )
 }
 
 dependencies {
@@ -136,14 +150,17 @@ dependencies {
 
     implementation(platform(libs.square.retrofit.bom))
     implementation(libs.square.retrofit)
+    implementation(libs.square.okhttpLogging)
     implementation(libs.square.retrofit.moshi)
     implementation(libs.square.moshi)
     ksp(libs.square.moshiKotlin)
     implementation(libs.square.moshiAdapters)
     implementation(libs.square.moshiSealed)
     ksp(libs.square.moshiSealedCodegen)
+    implementation(libs.square.logcat)
 
     implementation(libs.sqkon)
 
     implementation(libs.mnf.store)
+    implementation("io.github.theapache64:rebugger:1.0.0-rc03")
 }

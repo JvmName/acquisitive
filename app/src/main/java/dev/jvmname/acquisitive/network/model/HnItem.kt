@@ -1,17 +1,29 @@
 package dev.jvmname.acquisitive.network.model
 
+import android.os.Parcelable
+import androidx.compose.runtime.Immutable
 import com.squareup.moshi.JsonClass
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.zacsweers.moshix.sealed.annotations.TypeLabel
 import kotlinx.datetime.Instant
+import kotlinx.parcelize.Parcelize
 
+@Immutable
+sealed interface ShadedHnItem {
+    @JvmInline
+    value class Shallow(val item: ItemId) : ShadedHnItem
 
-@JvmInline
-value class ItemId(val id: Int)
+    @JvmInline
+    value class Full(val item: HnItem) : ShadedHnItem
+}
 
-@JsonClass(generateAdapter = true, generator = "sealed:type")
-sealed class HnItem(val id: ItemId) {
+@[JvmInline Parcelize Immutable JsonClass(generateAdapter = false)]
+value class ItemId(val id: Int) : Parcelable
+
+@[Immutable JsonClass(generateAdapter = true, generator = "sealed:type")]
+sealed interface HnItem {
+    abstract val id: ItemId
     abstract val by: String?
     abstract val time: Instant
     abstract val dead: Boolean?
@@ -20,72 +32,72 @@ sealed class HnItem(val id: ItemId) {
 
     @[Poko TypeLabel("story") JsonClass(generateAdapter = true)]
     class Story(
-        id: ItemId,
+        override val id: ItemId,
         override val by: String?,
         override val time: Instant,
-        override val dead: Boolean? = null,
-        override val deleted: Boolean? = null,
-        override val kids: ItemIdArray? = null,
+        override val dead: Boolean?,
+        override val deleted: Boolean?,
+        override val kids: ItemIdArray?,
         val title: String,
         val url: String?,
         val score: Int,
         val descendants: Int?,
         val text: String?,
-    ) : HnItem(id)
+    ) : HnItem
 
     @[Poko TypeLabel("comment") JsonClass(generateAdapter = true)]
     class Comment(
-        id: ItemId,
+        override val id: ItemId,
         override val by: String?,
         override val time: Instant,
-        override val dead: Boolean? = null,
-        override val deleted: Boolean? = null,
-        override val kids: ItemIdArray? = null,
+        override val dead: Boolean?,
+        override val deleted: Boolean?,
+        override val kids: ItemIdArray?,
         val text: String?,
         val parent: Int,
-    ) : HnItem(id)
+    ) : HnItem
 
     @[Poko TypeLabel("job") JsonClass(generateAdapter = true)]
     class Job(
-        id: ItemId,
+        override val id: ItemId,
         override val by: String?,
         override val time: Instant,
-        override val dead: Boolean? = null,
-        override val deleted: Boolean? = null,
-        override val kids: ItemIdArray? = null,
+        override val dead: Boolean?,
+        override val deleted: Boolean?,
+        override val kids: ItemIdArray?,
         val title: String,
         val text: String?,
         val url: String?,
         val score: Int,
-    ) : HnItem(id)
+    ) : HnItem
 
     @[Poko TypeLabel("poll") JsonClass(generateAdapter = true)]
     class Poll(
-        id: ItemId,
+        override val id: ItemId,
         override val by: String?,
         override val time: Instant,
-        override val dead: Boolean? = null,
-        override val deleted: Boolean? = null,
-        override val kids: ItemIdArray? = null,
+        override val dead: Boolean?,
+        override val deleted: Boolean?,
+        override val kids: ItemIdArray?,
         val title: String,
         val text: String?,
         val parts: ItemIdArray,
         val score: Int,
         val descendants: Int?,
-    ) : HnItem(id)
+    ) : HnItem
 
     @[Poko TypeLabel("pollopt") JsonClass(generateAdapter = true)]
     class PollOption(
-        id: ItemId,
+        override val id: ItemId,
         override val by: String?,
         override val time: Instant,
-        override val dead: Boolean? = null,
-        override val deleted: Boolean? = null,
-        override val kids: ItemIdArray? = null,
+        override val dead: Boolean?,
+        override val deleted: Boolean?,
+        override val kids: ItemIdArray?,
         val poll: ItemId,
         val text: String?,
         val score: Int,
-    ) : HnItem(id)
+    ) : HnItem
 }
 
 val HnItem.score: Int
@@ -177,3 +189,6 @@ fun HnItem.copy(
         score = score
     )
 }
+
+fun ItemId.shaded() = ShadedHnItem.Shallow(this)
+fun HnItem.shaded() = ShadedHnItem.Full(this)

@@ -1,13 +1,15 @@
 package dev.jvmname.acquisitive.network
 
-import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.addAdapter
 import dev.jvmname.acquisitive.network.adapters.IdAdapter
 import dev.jvmname.acquisitive.network.adapters.InstantAdapter
 import kotlinx.datetime.Instant
+import logcat.logcat
 import me.tatarka.inject.annotations.Inject
 import me.tatarka.inject.annotations.Provides
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
@@ -20,32 +22,36 @@ interface NetworkComponent {
     @[Provides SingleIn(AppScope::class)]
     fun providesMoshi(): Moshi {
         return Moshi.Builder()
-            .add(Instant::class.java, InstantAdapter)
+            .addAdapter(InstantAdapter)
             .add(IdAdapter.create())
+            .add(ItemIdArrayAdapterFactory)
             .build()
     }
 
     @Provides
     fun provideMoshiConverterFactory(moshi: Moshi) = MoshiConverterFactory.create(moshi)
 
-@Provides
-fun provideOkhttpClient(): OkHttpClient {
-return OkHttpClient.Builder()
-    .build()
-}
+    @Provides
+    fun provideOkhttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addNetworkInterceptor(HttpLoggingInterceptor { logcat(tag = "OkhttpInterceptor") { it } }.apply {
+                level = HttpLoggingInterceptor.Level.BASIC
+            })
+            .build()
+    }
 
 
     @[Inject SingleIn(AppScope::class)]
     class RetrofitFactory(
-        private val okhttp: () -> OkHttpClient,
+        private val okhttp: OkHttpClient,
         private val moshiConverterFactory: MoshiConverterFactory,
     ) {
         fun <T : Any> create(baseURL: String, clazz: KClass<T>): T {
             return Retrofit.Builder()
+                .client(okhttp)
                 .baseUrl(baseURL)
                 .addConverterFactory(moshiConverterFactory)
                 .validateEagerly(true)
-                .callFactory { request -> okhttp().newCall(request) }
                 .build()
                 .create(clazz.java)
         }

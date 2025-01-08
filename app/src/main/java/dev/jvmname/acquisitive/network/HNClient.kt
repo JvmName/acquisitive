@@ -8,17 +8,28 @@ import dev.jvmname.acquisitive.network.model.UserId
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.emptyItemIdArray
 import dev.jvmname.acquisitive.util.fetchAsync
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import logcat.asLog
+import logcat.logcat
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 
-
 abstract class HnClient {
     //TODO figure out if i want to take the boxing hit to have an ApiResult type
-    protected suspend fun <T> wrap(call: suspend () -> T): T {
-        return withContext(Dispatchers.IO) { call() }
+    protected suspend inline fun <reified T> wrap(crossinline call: suspend () -> T): T {
+        return withContext(Dispatchers.IO + CoroutineName("HnClientWrapped")) {
+            try {
+                if (!isActive) logcat { "***scope not active" }
+                call()
+            } catch (e: Exception) {
+                logcat { "***error: " + e.asLog() }
+                throw e
+            }
+        }
     }
 
     abstract suspend fun getStories(mode: FetchMode): ItemIdArray
@@ -34,7 +45,7 @@ abstract class HnClient {
 }
 
 @[Inject ContributesBinding(AppScope::class)]
-class RealHnClient (factory: NetworkComponent.RetrofitFactory) : HnClient() {
+class RealHnClient(factory: NetworkComponent.RetrofitFactory) : HnClient() {
     private val storyClient = factory.create<HnStoryApi>("https://hacker-news.firebaseio.com/v0/")
 //    private val userClient = factory.create<HnUserApi>("https://news.ycombinator.com/")
 
@@ -55,7 +66,11 @@ class RealHnClient (factory: NetworkComponent.RetrofitFactory) : HnClient() {
     }
 
     override suspend fun getTopStories(): ItemIdArray {
-        return wrap { storyClient.getTopStories() }
+        return try {
+            storyClient.getTopStories()
+        } catch (e: Exception) {
+            throw e
+        }
             ?: emptyItemIdArray()
     }
 

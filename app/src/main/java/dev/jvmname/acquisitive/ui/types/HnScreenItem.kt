@@ -1,12 +1,15 @@
 package dev.jvmname.acquisitive.ui.types
 
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.runtime.Immutable
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.network.model.ItemId
 
+@Immutable
 sealed interface HnScreenItem {
+    @[Poko Immutable]
+    class Shallow(val id: ItemId) : HnScreenItem
 
-    @Poko
+    @[Poko Immutable]
     class StoryItem(
         val id: ItemId,
         val title: String,
@@ -22,7 +25,7 @@ sealed interface HnScreenItem {
         val titleSuffix: String?,
     ) : HnScreenItem
 
-    @Poko
+    @[Poko Immutable]
     class CommentItem(
         val text: String,
         val time: String,
