@@ -8,6 +8,7 @@ import kotlinx.datetime.Instant
 import logcat.logcat
 import me.tatarka.inject.annotations.Inject
 import me.tatarka.inject.annotations.Provides
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -15,6 +16,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import java.io.File
 import kotlin.reflect.KClass
 
 @ContributesTo(AppScope::class)

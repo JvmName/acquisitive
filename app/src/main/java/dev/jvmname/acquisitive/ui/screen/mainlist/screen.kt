@@ -118,7 +118,7 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
 
         val lifecycleOwner = LocalLifecycleOwner.current
         val lifecycle = remember { lifecycleOwner.lifecycle }
-        LaunchedEffect(scrollState) {
+        LaunchedEffect(scrollState, state) {
             snapshotFlow { scrollState.firstVisibleItemIndex }
                 .filter { topIndex ->
                     logcat { "***saw scroll to $topIndex" }

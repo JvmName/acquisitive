@@ -48,7 +48,7 @@ class MainScreenPresenter(
         val now = remember { Clock.System.now() }
         val fetchMode by remember { mutableStateOf(screen.fetchMode) }
         SideEffect { logcat { "***before repo.observeStories" } }
-        val storyIds by repo.observeStories(fetchMode)
+        val storyIds by repo.observeStories(fetchMode, window = INFLATE_WINDOW)
             .collectAsState(emptyList(), context = Dispatchers.IO)
 
         val updatedRange: Pair<IntRange, List<ShadedHnItem>>? by inflateChannel
@@ -60,7 +60,7 @@ class MainScreenPresenter(
                 if (sliced.all { it is ShadedHnItem.Full }) {
                     null // no need to update anything
                 } else {
-                    range to repo.getStories(sliced)
+                    range to repo.getStories(fetchMode, sliced)
                 }
             }
             .collectAsState(null, context = Dispatchers.IO)
@@ -138,7 +138,7 @@ class MainScreenPresenter(
 
 
     companion object {
-        private const val INFLATE_WINDOW = 10
+        private const val INFLATE_WINDOW = 50
 
         private const val HOT_THRESHOLD_HIGH = 900
         private const val HOT_THRESHOLD_NORMAL = 300

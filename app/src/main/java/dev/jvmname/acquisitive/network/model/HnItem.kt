@@ -1,5 +1,6 @@
 package dev.jvmname.acquisitive.network.model
 
+import android.content.ClipData.Item
 import android.os.Parcelable
 import androidx.compose.runtime.Immutable
 import com.squareup.moshi.JsonClass
@@ -8,6 +9,7 @@ import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.zacsweers.moshix.sealed.annotations.TypeLabel
 import kotlinx.datetime.Instant
 import kotlinx.parcelize.Parcelize
+import kotlinx.serialization.Serializable
 
 @Immutable
 sealed interface ShadedHnItem {
@@ -17,6 +19,7 @@ sealed interface ShadedHnItem {
     @JvmInline
     value class Full(val item: HnItem) : ShadedHnItem
 }
+
 
 @[JvmInline Parcelize Immutable JsonClass(generateAdapter = false)]
 value class ItemId(val id: Int) : Parcelable
@@ -192,3 +195,9 @@ fun HnItem.copy(
 
 fun ItemId.shaded() = ShadedHnItem.Shallow(this)
 fun HnItem.shaded() = ShadedHnItem.Full(this)
+
+val ShadedHnItem.id : ItemId
+    get() = when(this){
+        is ShadedHnItem.Full -> item.id
+        is ShadedHnItem.Shallow -> item
+    }
