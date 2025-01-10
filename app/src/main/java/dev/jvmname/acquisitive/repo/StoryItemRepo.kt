@@ -5,11 +5,8 @@ import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.network.model.ShadedHnItem
 import dev.jvmname.acquisitive.network.model.shaded
-import dev.jvmname.acquisitive.ui.screen.mainlist.debugToString1
 import dev.jvmname.acquisitive.util.fetchAsync
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onEach
-import logcat.logcat
 import me.tatarka.inject.annotations.Inject
 
 
@@ -30,8 +27,5 @@ class StoryItemRepo(private val store: HnItemStore) {
 
     fun observeStories(mode: FetchMode, window: Int = 5): Flow<List<ShadedHnItem>> {
         return store.stream(mode, window)
-            .onEach {
-                logcat { "***observeStories produces: " + it.debugToString1() }
-            }
     }
 }

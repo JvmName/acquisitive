@@ -12,6 +12,7 @@ value class ItemIdArray
     Collection<ItemId> {
 
     constructor(size: Int) : this(IntArray(size))
+
     operator fun get(index: Int): ItemId = ItemId(storage[index])
     operator fun set(index: Int, value: ItemId) {
         storage[index] = value.id
@@ -21,32 +22,32 @@ value class ItemIdArray
 
     override operator fun iterator(): Iterator<ItemId> = IIAIterator(storage)
 
-    private class IIAIterator(private val array: IntArray) : Iterator<ItemId> {
-        private var index = 0
-        override fun hasNext() = index < array.size
-        override fun next() =
-            if (index < array.size) ItemId(array[index++]) else throw NoSuchElementException(index.toString())
+    private class IIAIterator(array: IntArray) : Iterator<ItemId> {
+        private val delegate = array.iterator()
+        override fun hasNext() = delegate.hasNext()
+        override fun next() = ItemId(delegate.next())
     }
 
     override fun contains(element: ItemId) = storage.contains(element.id)
 
     override fun containsAll(elements: Collection<ItemId>): Boolean {
-        return (elements as Collection<*>).all { it is ItemId && storage.contains(it.id) }
+        return elements.all { it.id in storage }
     }
 
-    override fun isEmpty(): Boolean = this.storage.isEmpty()
+    override fun isEmpty(): Boolean = storage.isEmpty()
 
     fun take(n: Int): ItemIdArray {
         require(n >= 0) { "Requested element count $n is less than zero." }
-        if (n == 0) return emptyItemIdArray()
+        if (n == 0 ) return emptyItemIdArray()
         if (n == 1) return itemIdArrayOf(first().id)
 
-        var count = 0
-        val storage = storage
+        val _storage = storage
         return ItemIdArray(n) { i ->
-            ItemId(storage[i])
+            ItemId(_storage[i])
         }
     }
+
+
 }
 
 /**

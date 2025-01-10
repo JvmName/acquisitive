@@ -4,12 +4,10 @@ import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.util.fastForEach
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
@@ -24,8 +22,11 @@ import dev.jvmname.acquisitive.repo.StoryItemRepo
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
@@ -45,83 +46,33 @@ class MainScreenPresenter(
     override fun present(): MainListScreen.MainListState {
         val inflateChannel = remember { MutableStateFlow(-1) }
 
-        val now = remember { Clock.System.now() }
-        val fetchMode by remember { mutableStateOf(screen.fetchMode) }
-        SideEffect { logcat { "***before repo.observeStories" } }
-        val storyIds by repo.observeStories(fetchMode, window = INFLATE_WINDOW)
-            .collectAsState(emptyList(), context = Dispatchers.IO)
+        val fetchMode = remember { screen.fetchMode }
 
-        val updatedRange: Pair<IntRange, List<ShadedHnItem>>? by inflateChannel
-            .filter { it >= 0 }
-            .mapLatest { index ->
-                logcat { "***consuming new index $index" }
-                val range = index..index + INFLATE_WINDOW
-                val sliced = storyIds.slice(range)
-                if (sliced.all { it is ShadedHnItem.Full }) {
-                    null // no need to update anything
-                } else {
-                    range to repo.getStories(fetchMode, sliced)
-                }
-            }
-            .collectAsState(null, context = Dispatchers.IO)
-
-        val items by remember {
-            derivedStateOf {
-                logcat { "***building new items list; currently ${storyIds.size} items" }
-                logcat { "***storyIds1 = " + storyIds.debugToString1() }
-
-                if (storyIds.isEmpty()) return@derivedStateOf emptyList<HnScreenItem>()
-                val updated = updatedRange
-                    ?.let { (range, updatedItems) ->
-                        buildList {
-                            storyIds.slice(0..range.first)
-                            addAll(updatedItems)
-                            addAll(storyIds.slice(range.last..storyIds.lastIndex))
-                        }
-                    } ?: storyIds
-
-                updated.mapIndexed { i, shaded ->
-                    val item = when (shaded) {
-                        is ShadedHnItem.Shallow -> return@mapIndexed shaded.toScreenItem()
-                        is ShadedHnItem.Full -> shaded.item
-                    }
-
-                    shaded.toScreenItem(
-                        rank = i + 1,
-                        isHot = item.score >= fetchMode.hotThreshold,
-                        icon = when {
-                            item.dead == true -> "☠️"
-                            item.deleted == true -> "🗑️"
-                            item is HnItem.Job -> "💼"
-                            item is HnItem.Poll -> "🗳️"
-                            else -> null
-                        },
-                        time = (now - item.time).toDateTimePeriod().toAbbreviatedDuration(),
-                        urlHost = when (item) {
-                            is HnItem.Job -> item.url?.let(::extractUrlHost)
-                            is HnItem.Story -> item.url?.let(::extractUrlHost)
-                            else -> null
-                        },
-                    )
-                }
+        val itemFlow = remember {
+            val storyIdFlow = repo.observeStories(fetchMode, window = INFLATE_WINDOW)
+                .onEach { logcat { "***observeStories produces: " + it.debugToString1() } }
+                .distinctUntilChanged()
+                .onStart { emit(emptyList()) }
+            val scrollFlow = inflateChannel
+                .filter { it >= INFLATE_WINDOW }
+                .onEach { logcat { "***inflateChannel update: $it" } }
+                .distinctUntilChanged()
+                .onStart { emit(0) }
+            combine(storyIdFlow, scrollFlow) { storyIds, scrollIndex ->
+                generateScreenItems(storyIds, scrollIndex, fetchMode)
             }
         }
+
+        val items by itemFlow.collectAsState(emptyList(), Dispatchers.IO)
 
         Rebugger(
             trackMap = mapOf(
                 "inflateChannel" to inflateChannel,
-                "now" to now,
                 "fetchMode" to fetchMode,
-//                "storyIds" to storyIds ,
-                "updatedRange" to updatedRange,
-                "items" to items,
+                "itemFlow" to itemFlow,
+                "items" to items.debugToString2(),
             ),
         )
-
-        SideEffect {
-            logcat { "***after rebugger before return" }
-            logcat { "***storyIds2 = " + items.debugToString2() }
-        }
         return MainListScreen.MainListState(
             fetchMode = fetchMode,
             stories = items,
@@ -136,6 +87,54 @@ class MainScreenPresenter(
         }
     }
 
+    private suspend fun generateScreenItems(
+        storyIds: List<ShadedHnItem>,
+        scrollIndex: Int,
+        fetchMode: FetchMode,
+    ): List<HnScreenItem> {
+        if (storyIds.isEmpty()) return emptyList()
+
+        val range = scrollIndex until scrollIndex + INFLATE_WINDOW
+        val window = storyIds.slice(range)
+
+        val updatedItems = when {
+            window.all { it is ShadedHnItem.Full } -> listOf(storyIds)
+            else -> listOf(
+                storyIds.slice(0..range.first),
+                repo.getStories(fetchMode, window), //splice in the updates
+                storyIds.slice(range.last..storyIds.lastIndex),
+            )
+        }
+
+        return flattenTransforming(
+            storyIds.size,
+            updatedItems,
+            transform = { i, shaded ->
+                val item = when (shaded) {
+                    is ShadedHnItem.Shallow -> return@flattenTransforming shaded.toScreenItem()
+                    is ShadedHnItem.Full -> shaded.item
+                }
+
+                shaded.toScreenItem(
+                    rank = i + 1,
+                    isHot = item.score >= fetchMode.hotThreshold,
+                    icon = when {
+                        item.dead == true -> "☠️"
+                        item.deleted == true -> "🗑️"
+                        item is HnItem.Job -> "💼"
+                        item is HnItem.Poll -> "🗳️"
+                        else -> null
+                    },
+                    time = (Clock.System.now() - item.time).toDateTimePeriod()
+                        .toAbbreviatedDuration(),
+                    urlHost = when (item) {
+                        is HnItem.Job -> item.url?.let(::extractUrlHost)
+                        is HnItem.Story -> item.url?.let(::extractUrlHost)
+                        else -> null
+                    },
+                )
+            })
+    }
 
     companion object {
         private const val INFLATE_WINDOW = 50
@@ -171,7 +170,24 @@ class MainScreenPresenter(
             ""
         }
     }
+
 }
+
+fun flattenTransforming(
+    size: Int,
+    lists: List<List<ShadedHnItem>>,
+    transform: (Int, ShadedHnItem) -> HnScreenItem,
+): List<HnScreenItem> {
+    return buildList(size) {
+        var masterIndex = 0
+        lists.fastForEach { list ->
+            list.fastForEach {
+                add(transform(masterIndex++, it))
+            }
+        }
+    }
+}
+
 
 fun ShadedHnItem.Shallow.toScreenItem(): HnScreenItem = HnScreenItem.Shallow(item)
 
@@ -217,7 +233,7 @@ fun ShadedHnItem.Full.toScreenItem(
 }
 
 
- fun List<ShadedHnItem>.debugToString1(): String = joinToString("") {
+fun List<ShadedHnItem>.debugToString1(): String = joinToString("") {
     when (it) {
         is ShadedHnItem.Full -> "F."
         is ShadedHnItem.Shallow -> "s."
@@ -229,7 +245,7 @@ inline fun <reified T : HnScreenItem> List<T>.debugToString2(): String =
         when (it) {
             is HnScreenItem.CommentItem -> "c."
             is HnScreenItem.Shallow -> "s."
-            is HnScreenItem.StoryItem -> "S."
+            is HnScreenItem.StoryItem -> "F."
             else -> ""
         }
     }

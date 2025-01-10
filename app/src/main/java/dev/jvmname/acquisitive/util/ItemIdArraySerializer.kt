@@ -11,7 +11,6 @@ import kotlinx.serialization.encoding.Encoder
 object ItemIdArraySerializer : KSerializer<ItemIdArray> {
     private val delegate = IntArraySerializer()
 
-
     override val descriptor: SerialDescriptor =
         SerialDescriptor("acq.ItemIdArraySerializer", delegate.descriptor)
 
@@ -22,5 +21,4 @@ object ItemIdArraySerializer : KSerializer<ItemIdArray> {
     override fun deserialize(decoder: Decoder): ItemIdArray {
         return ItemIdArray(decoder.decodeSerializableValue(delegate))
     }
-
 }

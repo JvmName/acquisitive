@@ -1,6 +1,5 @@
 package dev.jvmname.acquisitive.network.model
 
-import android.content.ClipData.Item
 import android.os.Parcelable
 import androidx.compose.runtime.Immutable
 import com.squareup.moshi.JsonClass
@@ -11,29 +10,29 @@ import kotlinx.datetime.Instant
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 
-@Immutable
+@[Immutable Serializable]
 sealed interface ShadedHnItem {
-    @JvmInline
+    @[JvmInline Serializable]
     value class Shallow(val item: ItemId) : ShadedHnItem
 
-    @JvmInline
+    @[JvmInline Serializable]
     value class Full(val item: HnItem) : ShadedHnItem
 }
 
 
-@[JvmInline Parcelize Immutable JsonClass(generateAdapter = false)]
+@[JvmInline Parcelize Immutable Serializable JsonClass(generateAdapter = false)]
 value class ItemId(val id: Int) : Parcelable
 
-@[Immutable JsonClass(generateAdapter = true, generator = "sealed:type")]
+@[Immutable Serializable JsonClass(generateAdapter = true, generator = "sealed:type")]
 sealed interface HnItem {
-    abstract val id: ItemId
-    abstract val by: String?
-    abstract val time: Instant
-    abstract val dead: Boolean?
-    abstract val deleted: Boolean?
-    abstract val kids: ItemIdArray?
+    val id: ItemId
+    val by: String?
+    val time: Instant
+    val dead: Boolean?
+    val deleted: Boolean?
+    val kids: ItemIdArray?
 
-    @[Poko TypeLabel("story") JsonClass(generateAdapter = true)]
+    @[Poko Serializable TypeLabel("story") JsonClass(generateAdapter = true)]
     class Story(
         override val id: ItemId,
         override val by: String?,
@@ -48,7 +47,7 @@ sealed interface HnItem {
         val text: String?,
     ) : HnItem
 
-    @[Poko TypeLabel("comment") JsonClass(generateAdapter = true)]
+    @[Poko Serializable TypeLabel("comment") JsonClass(generateAdapter = true)]
     class Comment(
         override val id: ItemId,
         override val by: String?,
@@ -60,7 +59,7 @@ sealed interface HnItem {
         val parent: Int,
     ) : HnItem
 
-    @[Poko TypeLabel("job") JsonClass(generateAdapter = true)]
+    @[Poko Serializable TypeLabel("job") JsonClass(generateAdapter = true)]
     class Job(
         override val id: ItemId,
         override val by: String?,
@@ -74,7 +73,7 @@ sealed interface HnItem {
         val score: Int,
     ) : HnItem
 
-    @[Poko TypeLabel("poll") JsonClass(generateAdapter = true)]
+    @[Poko Serializable TypeLabel("poll") JsonClass(generateAdapter = true)]
     class Poll(
         override val id: ItemId,
         override val by: String?,
@@ -196,8 +195,8 @@ fun HnItem.copy(
 fun ItemId.shaded() = ShadedHnItem.Shallow(this)
 fun HnItem.shaded() = ShadedHnItem.Full(this)
 
-val ShadedHnItem.id : ItemId
-    get() = when(this){
+val ShadedHnItem.id: ItemId
+    get() = when (this) {
         is ShadedHnItem.Full -> item.id
         is ShadedHnItem.Shallow -> item
     }
