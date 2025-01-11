@@ -1,17 +1,16 @@
 package dev.jvmname.acquisitive.ui.screen.mainlist
 
-import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastForEach
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
-import com.theapache64.rebugger.Rebugger
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
@@ -25,12 +24,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
-import logcat.logcat
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
@@ -41,38 +42,29 @@ class MainScreenPresenter(
     @Assisted private val screen: MainListScreen,
     @Assisted private val navigator: Navigator,
 ) : Presenter<MainListScreen.MainListState> {
-    @SuppressLint("StateFlowValueCalledInComposition")
     @Composable
     override fun present(): MainListScreen.MainListState {
         val inflateChannel = remember { MutableStateFlow(-1) }
 
         val fetchMode = remember { screen.fetchMode }
+        val mutex = remember { Mutex(false) }
 
         val itemFlow = remember {
             val storyIdFlow = repo.observeStories(fetchMode, window = INFLATE_WINDOW)
-                .onEach { logcat { "***observeStories produces: " + it.debugToString1() } }
                 .distinctUntilChanged()
+                .filterNot { mutex.isLocked }
                 .onStart { emit(emptyList()) }
             val scrollFlow = inflateChannel
                 .filter { it >= INFLATE_WINDOW }
-                .onEach { logcat { "***inflateChannel update: $it" } }
                 .distinctUntilChanged()
                 .onStart { emit(0) }
             combine(storyIdFlow, scrollFlow) { storyIds, scrollIndex ->
-                generateScreenItems(storyIds, scrollIndex, fetchMode)
+                generateScreenItems(storyIds, scrollIndex, fetchMode, mutex)
             }
         }
 
         val items by itemFlow.collectAsState(emptyList(), Dispatchers.IO)
 
-        Rebugger(
-            trackMap = mapOf(
-                "inflateChannel" to inflateChannel,
-                "fetchMode" to fetchMode,
-                "itemFlow" to itemFlow,
-                "items" to items.debugToString2(),
-            ),
-        )
         return MainListScreen.MainListState(
             fetchMode = fetchMode,
             stories = items,
@@ -91,6 +83,7 @@ class MainScreenPresenter(
         storyIds: List<ShadedHnItem>,
         scrollIndex: Int,
         fetchMode: FetchMode,
+        mutex: Mutex,
     ): List<HnScreenItem> {
         if (storyIds.isEmpty()) return emptyList()
 
@@ -98,12 +91,17 @@ class MainScreenPresenter(
         val window = storyIds.slice(range)
 
         val updatedItems = when {
-            window.all { it is ShadedHnItem.Full } -> listOf(storyIds)
-            else -> listOf(
-                storyIds.slice(0..range.first),
-                repo.getStories(fetchMode, window), //splice in the updates
-                storyIds.slice(range.last..storyIds.lastIndex),
-            )
+            window.fastAll { it is ShadedHnItem.Full } -> listOf(storyIds)
+            else -> {
+                val updatedWindow = withContext(Dispatchers.IO) {
+                    mutex.withLock { repo.getStories(fetchMode, window) }
+                }
+                listOf(
+                    storyIds.slice(0..<range.first),
+                    updatedWindow, //splice in the updates
+                    storyIds.slice(range.last + 1..storyIds.lastIndex),
+                )
+            }
         }
 
         return flattenTransforming(
@@ -137,7 +135,7 @@ class MainScreenPresenter(
     }
 
     companion object {
-        private const val INFLATE_WINDOW = 50
+        private const val INFLATE_WINDOW = 15
 
         private const val HOT_THRESHOLD_HIGH = 900
         private const val HOT_THRESHOLD_NORMAL = 300
@@ -200,6 +198,7 @@ fun ShadedHnItem.Full.toScreenItem(
 ): HnScreenItem = when (item) {
     is HnItem.Comment -> with(item) {
         HnScreenItem.CommentItem(
+            id = id,
             text = text.orEmpty(),
             time = time,
             author = by.orEmpty(),

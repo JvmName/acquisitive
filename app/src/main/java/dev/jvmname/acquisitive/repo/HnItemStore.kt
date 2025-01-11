@@ -3,12 +3,14 @@
 package dev.jvmname.acquisitive.repo
 
 import android.util.SparseArray
+import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastMap
 import com.mercury.sqkon.db.KeyValueStorage
 import com.mercury.sqkon.db.Sqkon
 import dev.jvmname.acquisitive.di.AppCrScope
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.FetchMode
-import dev.jvmname.acquisitive.network.model.ItemId
+import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ShadedHnItem
 import dev.jvmname.acquisitive.network.model.id
 import dev.jvmname.acquisitive.network.model.shaded
@@ -20,8 +22,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import me.tatarka.inject.annotations.Inject
@@ -40,37 +42,38 @@ class HnItemStore(
         config = KeyValueStorage.Config(dispatcher = Dispatchers.IO)
     )
 
-    suspend fun getItem(mode: FetchMode, itemId: ItemId): ShadedHnItem.Full {
-        //TODO eventually sqkon should support "select by key and value"
+    suspend fun getItemRange(mode: FetchMode, ids: ItemIdArray): List<ShadedHnItem> {
+        val updated = ids.fetchAsync(Dispatchers.IO) { client.getItem(it) }
+
         val storedList = storage.selectByKey(mode.value)
             .firstOrNull()
             ?.list.orEmpty()
-        val networkItem = withContext(Dispatchers.IO) {
-            client.getItem(itemId).shaded()
-        }
+            .toMutableList()
 
-        return networkItem.also {
-            val storedIndex = storedList.indexOfFirst { it.id == itemId }
-            if (storedIndex >= 0) {
-                storedList.toMutableList().apply {
-                    set(storedIndex, networkItem)
-                }
-//                scope.launch(Dispatchers.IO) {
+        if (storedList.isNotEmpty()) {
+            val mappedUpdated = SparseArray<HnItem>(ids.size)
+
+            updated.fastForEach { item -> //create mapping
+                mappedUpdated.put(item.id.id, item)
+            }
+
+            val iter = storedList.listIterator()
+            iter.forEach { item ->
+                mappedUpdated.get(item.id.id)
+                    ?.let { iter.set(it.shaded()) }
+            }
+            scope.launch(Dispatchers.IO) {
                 storage.upsert(mode.value, ShadedItemList(storedList))
-//                }
             }
         }
+        return updated.fastMap(HnItem::shaded)
     }
 
-    fun stream(mode: FetchMode, window: Int): Flow<List<ShadedHnItem>> {
+    fun streamItems(mode: FetchMode, window: Int): Flow<List<ShadedHnItem>> {
         return storage.selectByKey(mode.value)
             .map { it?.list.orEmpty() }
             .onStart { emit(getNetworkItems(mode, window)) }
-            .onEach {
-                it.lastIndex
-            }
     }
-
 
     private suspend fun getNetworkItems(mode: FetchMode, window: Int): List<ShadedHnItem> {
         val fullThenShallows = fetchNetworkItems(mode, window)
@@ -81,15 +84,15 @@ class HnItemStore(
             .orEmpty()
 
         if (storedList.isEmpty() || fullThenShallows.size > storedList.size) {
-//            scope.launch(Dispatchers.IO) {
-            storage.upsert(mode.value, ShadedItemList(fullThenShallows))
-//            }
+            scope.launch(Dispatchers.IO) {
+                storage.upsert(mode.value, ShadedItemList(fullThenShallows))
+            }
             return fullThenShallows
         }
         val mapping = buildMapping(storedList)
 
         //copy any Full items into the FullThenShallows list
-        val fullyUpdated = fullThenShallows.map { item ->
+        val fullyUpdated = fullThenShallows.fastMap { item ->
             if (item is ShadedHnItem.Shallow) {
                 when (val fromMapping = mapping[item.id.id]) {
                     null, is ShadedHnItem.Shallow -> item
@@ -99,9 +102,9 @@ class HnItemStore(
                 item
             }
         }
-//        scope.launch(Dispatchers.IO) {
-        storage.upsert(mode.value, ShadedItemList(fullyUpdated))
-//        }
+        scope.launch(Dispatchers.IO) {
+            storage.upsert(mode.value, ShadedItemList(fullyUpdated))
+        }
         return fullyUpdated
     }
 
@@ -113,15 +116,15 @@ class HnItemStore(
 
             //equivalent to fulls.map(::Full) + shallows.map(::Shallow), but with fewer allocations
             buildList(ids.size) {
-                fulls.forEach { add(ShadedHnItem.Full(it)) }
-                shallows.forEach { add(ShadedHnItem.Shallow(it)) }
+                fulls.fastForEach { add(ShadedHnItem.Full(it)) }
+                shallows.fastForEach { add(ShadedHnItem.Shallow(it)) }
             }
         }
 }
 
 private fun buildMapping(storedList: List<ShadedHnItem>): SparseArray<ShadedHnItem> {
     val map = SparseArray<ShadedHnItem>(storedList.size)
-    storedList.forEach { item ->
+    storedList.fastForEach { item ->
         map.append(item.id.id, item)
     }
     return map

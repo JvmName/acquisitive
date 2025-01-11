@@ -5,6 +5,7 @@ package dev.jvmname.acquisitive.util
 import com.squareup.moshi.JsonClass
 import dev.jvmname.acquisitive.network.model.ItemId
 import kotlinx.serialization.Serializable
+import kotlin.contracts.contract
 
 @[JvmInline Serializable(with = ItemIdArraySerializer::class) JsonClass(generateAdapter = false)]
 value class ItemIdArray
@@ -38,12 +39,21 @@ value class ItemIdArray
 
     fun take(n: Int): ItemIdArray {
         require(n >= 0) { "Requested element count $n is less than zero." }
-        if (n == 0 ) return emptyItemIdArray()
+        if (n == 0) return emptyItemIdArray()
         if (n == 1) return itemIdArrayOf(first().id)
 
         val _storage = storage
         return ItemIdArray(n) { i ->
             ItemId(_storage[i])
+        }
+    }
+
+
+    @Suppress("ReplaceManualRangeWithIndicesCalls")
+    inline fun fastForEach(action: (ItemId) -> Unit) {
+        contract { callsInPlace(action) }
+        for (index in (0..<size)) {
+            action(get(index))
         }
     }
 

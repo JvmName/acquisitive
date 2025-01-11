@@ -6,12 +6,14 @@ import dev.jvmname.acquisitive.network.model.ItemId
 
 @Immutable
 sealed interface HnScreenItem {
+    val id: ItemId
+
     @[Poko Immutable]
-    class Shallow(val id: ItemId) : HnScreenItem
+    class Shallow(override val id: ItemId) : HnScreenItem
 
     @[Poko Immutable]
     class StoryItem(
-        val id: ItemId,
+        override val id: ItemId,
         val title: String,
         val isHot: Boolean,
         val rank: Int,
@@ -27,6 +29,7 @@ sealed interface HnScreenItem {
 
     @[Poko Immutable]
     class CommentItem(
+        override val id: ItemId,
         val text: String,
         val time: String,
         val author: String,

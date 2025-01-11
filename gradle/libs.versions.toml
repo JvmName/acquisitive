@@ -75,5 +75,5 @@ square-moshiSealed = { module = "dev.zacsweers.moshix:moshi-sealed-runtime", ver
 square-moshiSealedCodegen = { module = "dev.zacsweers.moshix:moshi-sealed-codegen", version.ref = "moshiX" }
 square-logcat = "com.squareup.logcat:logcat:0.1"
 
-sqkon = "com.mercury.sqkon:library-android:1.0.0-alpha01"
+sqkon = "com.mercury.sqkon:library-android:1.0.0-alpha02"
 mnf-store = { module = "org.mobilenativefoundation.store:store5", version = "5.1.0-alpha05" }

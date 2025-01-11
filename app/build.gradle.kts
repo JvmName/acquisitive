@@ -23,6 +23,7 @@ kotlin {
             "androidx.compose.foundation.ExperimentalFoundationApi",
             "kotlin.ExperimentalStdlibApi",
             "kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "kotlin.contracts.ExperimentalContracts",
         )
         freeCompilerArgs.addAll(
             "-Xjsr305=strict",

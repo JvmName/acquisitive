@@ -1,6 +1,5 @@
 package dev.jvmname.acquisitive.util
 
-import android.util.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
