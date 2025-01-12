@@ -1,5 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package dev.jvmname.acquisitive.repo
 
 import android.util.SparseArray

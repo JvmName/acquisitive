@@ -1,6 +1,7 @@
 package dev.jvmname.acquisitive.ui.screen.mainlist
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
@@ -40,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,16 +59,11 @@ import com.slack.circuit.runtime.screen.Screen
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
-import dev.jvmname.acquisitive.ui.theme.primaryDarkMediumContrast
+import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
-import kotlinx.atomicfu.TraceBase.None.append
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.isActive
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.parcelize.Parcelize
 import logcat.logcat
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
@@ -119,9 +117,29 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
         val lifecycleOwner = LocalLifecycleOwner.current
         val lifecycle = remember { lifecycleOwner.lifecycle }
         LaunchedEffect(scrollState, state) {
+//            snapshotFlow { scrollState.layoutInfo }
+//                .filter { layoutInfo ->
+//                    when{
+//                        scrollState.canScrollForward -> true
+//                        layoutInfo.visibleItemsInfo.lastOrNull()?.index >= state.stories.lastIndex -> true
+//                        else -> false
+//
+//                    }
+//                }
+
+
             snapshotFlow { scrollState.firstVisibleItemIndex }
                 .filter { topIndex ->
                     logcat { "***saw scroll to $topIndex" }
+                    when {
+                        !scrollState.canScrollForward -> true
+                        state.stories.size - 1 > topIndex -> true
+                        else -> state.stories.subList(
+                            topIndex,
+                            scrollState.layoutInfo.visibleItemsInfo.last().index
+                        )
+                    }
+
                     if (state.stories.lastIndex > topIndex) {
                         state.stories[topIndex] is HnScreenItem.Shallow
                     } else false
@@ -169,11 +187,13 @@ fun MainListItem(
                             top.linkTo(parent.top)
                             start.linkTo(startGuide)
                             bottom.linkTo(parent.bottom)
-                            width = Dimension.ratio("1:1")
+                            width = Dimension.preferredWrapContent
+                            height = Dimension.fillToConstraints
                         }
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(vertical = 2.dp),
+                        .padding(vertical = 10.dp, horizontal = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Text(
                         item.rank.toString(),
@@ -182,13 +202,14 @@ fun MainListItem(
                     Text(
                         item.score.toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (item.isHot) primaryDarkMediumContrast else Color.Unspecified
+                        color = if (item.isHot) hotColor else Color.Unspecified,
+                        fontWeight = if (item.isHot) FontWeight.Bold else LocalTextStyle.current.fontWeight
                     )
                     if (item.isHot) {
                         Icon(
                             Icons.Default.LocalFireDepartment,
                             "hot",
-                            tint = primaryDarkMediumContrast
+                            tint = hotColor,
                         )
                     }
 
@@ -280,7 +301,11 @@ fun MainListItem(
                     ) {
                         val icon = if (item.isHot) Icons.Outlined.LocalFireDepartment
                         else Icons.AutoMirrored.Outlined.Comment
-                        CompositionLocalProvider(LocalContentColor provides primaryDarkMediumContrast) {
+                        val cachedColor = LocalContentColor.current
+                        CompositionLocalProvider(LocalContentColor.providesComputed {
+                            if (item.isHot) hotColor
+                            else cachedColor
+                        }) {
                             Icon(icon, "Comments")
                             if (item.numChildren > 0) {
                                 Text(
@@ -320,48 +345,37 @@ private fun buildTitleText(item: HnScreenItem.StoryItem): String {
 fun PreviewMainList() {
     val state = remember {
         val list = List(15) {
-            HnScreenItem.StoryItem(
-                id = ItemId(it),
-                title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
-                isHot = false,
-                rank = it + 1,
-                score = 950,
-                urlHost = "github.com",
-                numChildren = 121 + it,
-                time = "19h",
-                author = "JvmName",
-                isDead = false,
-                isDeleted = false,
-                titleSuffix = "💼",
-            )
+            storyItem(it)
         }
         MainListScreen.MainListState(FetchMode.TOP, list, MutableStateFlow(-1)) {}
     }
-    AcquisitiveTheme {
+    AcquisitiveTheme(darkTheme = true) {
         MainListContent(state)
     }
 }
 
 @[Preview Composable]
 fun PreviewMainListItem() {
-    AcquisitiveTheme {
+    AcquisitiveTheme(darkTheme = true) {
         MainListItem(
             Modifier,
-            HnScreenItem.StoryItem(
-                id = ItemId(123),
-                title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
-                isHot = false,
-                rank = 2,
-                score = 950,
-                urlHost = "github.com",
-                numChildren = 122,
-                time = "19h",
-                author = "JvmName",
-                isDead = false,
-                isDeleted = false,
-                titleSuffix = "💼",
-            ),
+            storyItem(1234),
             eventSink = {}
         )
     }
 }
+
+private fun storyItem(it: Int) = HnScreenItem.StoryItem(
+    id = ItemId(it),
+    title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
+    isHot = true,
+    rank = it + 1,
+    score = 950,
+    urlHost = "github.com",
+    numChildren = 121 + it,
+    time = "19h",
+    author = "JvmName",
+    isDead = false,
+    isDeleted = false,
+    titleSuffix = "💼",
+)

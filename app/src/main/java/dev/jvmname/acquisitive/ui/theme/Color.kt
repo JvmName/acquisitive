@@ -1,6 +1,8 @@
 package dev.jvmname.acquisitive.ui.theme
 import androidx.compose.ui.graphics.Color
 
+val hotColor = Color(0xFFF19D38)
+
 val primaryLight = Color(0xFF805611)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFFFDDB4)
