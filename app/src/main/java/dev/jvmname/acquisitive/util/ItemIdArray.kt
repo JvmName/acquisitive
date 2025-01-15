@@ -48,16 +48,20 @@ value class ItemIdArray
         }
     }
 
+    fun slice(indices: IntRange): ItemIdArray {
+        if (indices.isEmpty()) return emptyItemIdArray()
+        return ItemIdArray(storage.sliceArray(indices))
+    }
 
-    @Suppress("ReplaceManualRangeWithIndicesCalls")
-    inline fun fastForEach(action: (ItemId) -> Unit) {
+
+    inline fun forEach(action: (ItemId) -> Unit) {
         contract { callsInPlace(action) }
-        for (index in (0..<size)) {
+        for (index in indices) {
             action(get(index))
         }
     }
 
-
+    val indices: IntRange get() = storage.indices
 }
 
 /**

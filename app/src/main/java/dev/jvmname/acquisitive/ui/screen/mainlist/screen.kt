@@ -9,10 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Comment
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -33,11 +30,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,8 +46,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.flowWithLifecycle
+import androidx.constraintlayout.compose.atLeast
+import app.cash.paging.PagingData
+import app.cash.paging.compose.LazyPagingItems
+import app.cash.paging.compose.collectAsLazyPagingItems
+import app.cash.paging.compose.itemKey
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
@@ -61,21 +60,18 @@ import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.parcelize.Parcelize
-import logcat.logcat
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
-private val MIN_ITEM_HEIGHT = 200.dp
+private val CELL_HEIGHT = 200.dp
 
 @Parcelize
 data class MainListScreen(val fetchMode: FetchMode = FetchMode.TOP) : Screen {
     data class MainListState(
+        val isRefreshing: Boolean,
         val fetchMode: FetchMode,
-        val stories: List<HnScreenItem>,
-        val inflateItemsAfter: MutableStateFlow<Int>,
+        val pagedStories: LazyPagingItems<HnScreenItem>,
         val eventSink: (MainListEvent) -> Unit,
     ) : CircuitUiState
 }
@@ -85,6 +81,7 @@ sealed class MainListEvent : CircuitUiEvent {
     data object UpvoteClick : MainListEvent()
     data object CommentsClick : MainListEvent()
     data object AddComment : MainListEvent()
+    data object Refresh : MainListEvent()
 }
 
 @[Composable CircuitInject(MainListScreen::class, AppScope::class)]
@@ -93,63 +90,38 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
         modifier = modifier,
         topBar = { TopAppBar(title = { Text(state.fetchMode.name) }) }) { innerPadding ->
 
-        val scrollState = rememberLazyListState()
+       PullToRefreshBox(
+           isRefreshing = false,
+           onRefresh = { state.eventSink(MainListEvent.Refresh) }
+       ) {
+           LazyColumn(
+               modifier = Modifier
+                   .padding(innerPadding)
+                   .fillMaxSize(),
+           ) {
+               val paged = state.pagedStories
 
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize(),
-            state = scrollState
-        ) {
-            logcat { "***list size: ${state.stories.size}; shallow: ${state.stories.count { it is HnScreenItem.Shallow }} other: ${state.stories.count { it !is HnScreenItem.Shallow }}" }
-            items(state.stories,
-                key = {
-                    when (it) {
-                        is HnScreenItem.Shallow -> it.id
-                        is HnScreenItem.StoryItem -> it.id
-                        is HnScreenItem.CommentItem -> error("unexpected item type")
-                    }
-                }) { item ->
-                MainListItem(modifier, item, state.eventSink)
-            }
-        }
+               items(
+                   count = paged.itemCount,
+                   key = paged.itemKey { it.id },
+                   itemContent = { index ->
+                       val item = paged[index]
+                       when (item) {
+                           null -> TODO("placeholder")
+                           else -> {
+                               when (item) {
+                                   //don't love doing this here but it's easiest for now
+                                   is HnScreenItem.StoryItem -> item.rank = index + 1
+                                   else -> Unit
+                               }
+                               MainListItem(modifier, item, state.eventSink)
+                           }
+                       }
 
-        val lifecycleOwner = LocalLifecycleOwner.current
-        val lifecycle = remember { lifecycleOwner.lifecycle }
-        LaunchedEffect(scrollState, state) {
-//            snapshotFlow { scrollState.layoutInfo }
-//                .filter { layoutInfo ->
-//                    when{
-//                        scrollState.canScrollForward -> true
-//                        layoutInfo.visibleItemsInfo.lastOrNull()?.index >= state.stories.lastIndex -> true
-//                        else -> false
-//
-//                    }
-//                }
-
-
-            snapshotFlow { scrollState.firstVisibleItemIndex }
-                .filter { topIndex ->
-                    logcat { "***saw scroll to $topIndex" }
-                    when {
-                        !scrollState.canScrollForward -> true
-                        state.stories.size - 1 > topIndex -> true
-                        else -> state.stories.subList(
-                            topIndex,
-                            scrollState.layoutInfo.visibleItemsInfo.last().index
-                        )
-                    }
-
-                    if (state.stories.lastIndex > topIndex) {
-                        state.stories[topIndex] is HnScreenItem.Shallow
-                    } else false
-                }
-                .flowWithLifecycle(lifecycle)
-                .collect { index ->
-                    logcat { "***updated scroll to $index" }
-                    state.inflateItemsAfter.update { index }
-                }
-        }
+                   }
+               )
+           }
+       }
     }
 }
 
@@ -159,20 +131,28 @@ fun MainListItem(
     item: HnScreenItem,
     eventSink: (MainListEvent) -> Unit,
 ) {
-    val f =
-        remember { logcat("MainListItem") { "entered MLI with ${item::class.simpleName}" }; false }
-    //TODO: fork Swipe and put the mutative actions on the righthand side
     when (item) {
-        is HnScreenItem.Shallow -> CircularProgressIndicator(
-            modifier = Modifier.width(64.dp),
-            color = MaterialTheme.colorScheme.secondary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-        )
+        is HnScreenItem.Shallow -> {
+            OutlinedCard(
+                modifier = modifier
+                    .heightIn(max = CELL_HEIGHT)
+                    .fillMaxWidth()
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .heightIn(max = CELL_HEIGHT - 16.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.secondary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
+        }
 
         is HnScreenItem.StoryItem -> OutlinedCard(modifier = modifier) {
             ConstraintLayout(
                 modifier = modifier
-                    .heightIn(max = MIN_ITEM_HEIGHT)
+                    .heightIn(max = CELL_HEIGHT)
                     .fillMaxWidth()
             ) {
                 val (rankScoreBox, actionBox) = createRefs()
@@ -187,7 +167,7 @@ fun MainListItem(
                             top.linkTo(parent.top)
                             start.linkTo(startGuide)
                             bottom.linkTo(parent.bottom)
-                            width = Dimension.preferredWrapContent
+                            width = Dimension.preferredWrapContent.atLeast(47.dp)
                             height = Dimension.fillToConstraints
                         }
                         .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -202,14 +182,14 @@ fun MainListItem(
                     Text(
                         item.score.toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (item.isHot) hotColor else Color.Unspecified,
+                        color = if (item.isHot) MaterialTheme.colorScheme.hotColor else Color.Unspecified,
                         fontWeight = if (item.isHot) FontWeight.Bold else LocalTextStyle.current.fontWeight
                     )
                     if (item.isHot) {
                         Icon(
                             Icons.Default.LocalFireDepartment,
                             "hot",
-                            tint = hotColor,
+                            tint = MaterialTheme.colorScheme.hotColor,
                         )
                     }
 
@@ -301,7 +281,9 @@ fun MainListItem(
                     ) {
                         val icon = if (item.isHot) Icons.Outlined.LocalFireDepartment
                         else Icons.AutoMirrored.Outlined.Comment
+
                         val cachedColor = LocalContentColor.current
+                        val hotColor = MaterialTheme.colorScheme.hotColor
                         CompositionLocalProvider(LocalContentColor.providesComputed {
                             if (item.isHot) hotColor
                             else cachedColor
@@ -342,19 +324,6 @@ private fun buildTitleText(item: HnScreenItem.StoryItem): String {
 }
 
 @[Preview Composable]
-fun PreviewMainList() {
-    val state = remember {
-        val list = List(15) {
-            storyItem(it)
-        }
-        MainListScreen.MainListState(FetchMode.TOP, list, MutableStateFlow(-1)) {}
-    }
-    AcquisitiveTheme(darkTheme = true) {
-        MainListContent(state)
-    }
-}
-
-@[Preview Composable]
 fun PreviewMainListItem() {
     AcquisitiveTheme(darkTheme = true) {
         MainListItem(
@@ -365,11 +334,24 @@ fun PreviewMainListItem() {
     }
 }
 
+@[Preview Composable]
+fun PreviewMainList() {
+    val paged = emptyFlow<PagingData<HnScreenItem>>().collectAsLazyPagingItems()
+    val state = remember {
+        val list = listOf(HnScreenItem.Shallow(ItemId(-1))) + List(15) {
+            storyItem(it)
+        }
+        MainListScreen.MainListState(false, FetchMode.TOP, paged) {}
+    }
+    AcquisitiveTheme(darkTheme = true) {
+        MainListContent(state)
+    }
+}
+
 private fun storyItem(it: Int) = HnScreenItem.StoryItem(
     id = ItemId(it),
     title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
     isHot = true,
-    rank = it + 1,
     score = 950,
     urlHost = "github.com",
     numChildren = 121 + it,

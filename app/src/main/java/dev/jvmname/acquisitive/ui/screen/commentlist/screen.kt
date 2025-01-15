@@ -4,14 +4,14 @@ import androidx.compose.runtime.Composable
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
-import dev.jvmname.acquisitive.repo.StoryItemRepo
+import dev.jvmname.acquisitive.repo.HnItemRepository
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
 @[Inject CircuitInject(CommentListScreen::class, AppScope::class)]
 class CommentListPresenter(
-    private val repo: StoryItemRepo,
+    private val repo: HnItemRepository,
     @Assisted private val screen: CommentListScreen,
     @Assisted private val navigator: Navigator,
 ) : Presenter<CommentListScreen.CommentListState> {

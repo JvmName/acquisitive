@@ -1,7 +1,6 @@
 package dev.jvmname.acquisitive.ui.theme
-import androidx.compose.ui.graphics.Color
 
-val hotColor = Color(0xFFF19D38)
+import androidx.compose.ui.graphics.Color
 
 val primaryLight = Color(0xFF805611)
 val onPrimaryLight = Color(0xFFFFFFFF)
@@ -219,9 +218,24 @@ val surfaceContainerDarkHighContrast = Color(0xFF251F17)
 val surfaceContainerHighDarkHighContrast = Color(0xFF302921)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF3B342B)
 
+val lightIndent0 = Color(0xFF3F9101)
+val lightIndent1 = Color(0xFF0E4A8E)
+val lightIndent2 = Color(0xFFB4960A)
+val lightIndent3 = Color(0xFFBC0BA2)
+val lightIndent4 = Color(0xFF61AA0D)
+val lightIndent5 = Color(0xFF3D017A)
+val lightIndent6 = Color(0xFFD6A60A)
+val lightIndent7 = Color(0xFF7710A3)
+val lightIndent8 = Color(0xFFA502CE)
+val lightIndent9 = Color(0xFFEB5A00)
 
-
-
-
-
-
+val darkIndent0 = Color(0xFFE8BA36)
+val darkIndent1 = Color(0xFF54A857)
+val darkIndent2 = Color(0xFF359FF4)
+val darkIndent3 = Color(0xFF6E7ED9)
+val darkIndent4 = Color(0xFF179387)
+val darkIndent5 = Color(0xFFA5BE00)
+val darkIndent6 = Color(0xFF005FA3)
+val darkIndent7 = Color(0xFFDB7100)
+val darkIndent8 = Color(0xFFFFC666)
+val darkIndent9 = Color(0xFF38FF91)

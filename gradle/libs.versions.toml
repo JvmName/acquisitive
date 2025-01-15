@@ -39,6 +39,7 @@ androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview
 androidx-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 androidx-material3 = { module = "androidx.compose.material3:material3" }
 androidx-material3-icons = { module = "androidx.compose.material:material-icons-extended" }
+androidx-paging = "androidx.paging:paging-compose:3.3.5"
 
 circuit-foundation = { module = "com.slack.circuit:circuit-foundation", version.ref = "circuit" }
 circuit-overlay = { module = "com.slack.circuit:circuit-overlay", version.ref = "circuit" }
@@ -74,6 +75,7 @@ square-moshiAdapters = { module = "dev.zacsweers.moshix:moshi-adapters", version
 square-moshiSealed = { module = "dev.zacsweers.moshix:moshi-sealed-runtime", version.ref = "moshiX" }
 square-moshiSealedCodegen = { module = "dev.zacsweers.moshix:moshi-sealed-codegen", version.ref = "moshiX" }
 square-logcat = "com.squareup.logcat:logcat:0.1"
+square-paging = "app.cash.paging:paging-compose-common:3.3.0-alpha02-0.5.1"
 
-sqkon = "com.mercury.sqkon:library-android:1.0.0-alpha02"
+sqkon = "com.mercury.sqkon:library-android:1.0.0-alpha03"
 mnf-store = { module = "org.mobilenativefoundation.store:store5", version = "5.1.0-alpha05" }

@@ -24,6 +24,7 @@ kotlin {
             "kotlin.ExperimentalStdlibApi",
             "kotlinx.coroutines.ExperimentalCoroutinesApi",
             "kotlin.contracts.ExperimentalContracts",
+            "androidx.paging.ExperimentalPagingApi",
         )
         freeCompilerArgs.addAll(
             "-Xjsr305=strict",
@@ -126,6 +127,8 @@ dependencies {
     implementation(libs.androidx.constraintlayout.compose)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.androidx.paging)
+
 
     implementation(libs.circuit.foundation)
     implementation(libs.circuit.overlay)
@@ -159,6 +162,7 @@ dependencies {
     implementation(libs.square.moshiSealed)
     ksp(libs.square.moshiSealedCodegen)
     implementation(libs.square.logcat)
+    implementation(libs.square.paging)
 
     implementation(libs.sqkon)
 

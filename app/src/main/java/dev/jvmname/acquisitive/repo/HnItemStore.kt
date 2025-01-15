@@ -1,129 +1,69 @@
 package dev.jvmname.acquisitive.repo
 
-import android.util.SparseArray
-import androidx.compose.ui.util.fastForEach
-import androidx.compose.ui.util.fastMap
+import app.cash.paging.PagingSource
 import com.mercury.sqkon.db.KeyValueStorage
 import com.mercury.sqkon.db.Sqkon
-import dev.jvmname.acquisitive.di.AppCrScope
+import com.mercury.sqkon.db.inList
 import dev.jvmname.acquisitive.network.HnClient
-import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
-import dev.jvmname.acquisitive.network.model.ShadedHnItem
-import dev.jvmname.acquisitive.network.model.id
-import dev.jvmname.acquisitive.network.model.shaded
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.fetchAsync
-import dev.jvmname.acquisitive.util.retry
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
+import kotlinx.datetime.Clock
 import me.tatarka.inject.annotations.Inject
-
-@[Serializable JvmInline]
-private value class ShadedItemList(val list: List<ShadedHnItem>)
+import kotlin.time.Duration.Companion.minutes
 
 @Inject
 class HnItemStore(
     skn: Sqkon,
     private val client: HnClient,
-    @AppCrScope private val scope: CoroutineScope,
 ) {
-    private val storage = skn.keyValueStorage<ShadedItemList>(
-        name = ShadedItemList::class.simpleName!!,
+    private val storage = skn.keyValueStorage<HnItem>(
+        HnItem::class.simpleName!!,
         config = KeyValueStorage.Config(dispatcher = Dispatchers.IO)
     )
 
-    suspend fun getItemRange(mode: FetchMode, ids: ItemIdArray): List<ShadedHnItem> {
-        val updated = ids.fetchAsync(Dispatchers.IO) { client.getItem(it) }
-
-        val storedList = storage.selectByKey(mode.value)
-            .firstOrNull()
-            ?.list.orEmpty()
-            .toMutableList()
-
-        if (storedList.isNotEmpty()) {
-            val mappedUpdated = SparseArray<HnItem>(ids.size)
-
-            updated.fastForEach { item -> //create mapping
-                mappedUpdated.put(item.id.id, item)
-            }
-
-            val iter = storedList.listIterator()
-            iter.forEach { item ->
-                mappedUpdated.get(item.id.id)
-                    ?.let { iter.set(it.shaded()) }
-            }
-            scope.launch(Dispatchers.IO) {
-                storage.upsert(mode.value, ShadedItemList(storedList))
-            }
-        }
-        return updated.fastMap(HnItem::shaded)
+    fun pagingSource(ids: ItemIdArray): PagingSource<Int, HnItem> {
+        return storage.selectPagingSource(
+            HnItem::id.inList(ids.map { it.id.toString() }),
+            expiresAfter = Clock.System.now() + CACHE_EXPIRATION
+        )
     }
 
-    fun streamItems(mode: FetchMode, window: Int): Flow<List<ShadedHnItem>> {
-        return storage.selectByKey(mode.value)
-            .map { it?.list.orEmpty() }
-            .onStart { emit(getNetworkItems(mode, window)) }
+    suspend fun getItemRange(
+        ids: ItemIdArray,
+        refresh: Boolean = false,
+    ): List<HnItem> = storage.transactionWithResult twr@{
+        if (ids.isEmpty()) return@twr emptyList()
+
+        val now = Clock.System.now()
+        val keys = ids.map { it.id.toString() }
+
+        val storedList = if (refresh) {
+            coroutineScope {
+                launch(Dispatchers.IO) { storage.deleteExpired() }
+            }
+            emptyList()
+        } else {
+            storage.selectByKeys(
+                keys,
+                expiresAfter = now
+            ).firstOrNull() ?: emptyList()
+        }
+
+        if (refresh || storedList.size != ids.size) {
+            val updated = ids.fetchAsync { client.getItem(it) }
+            storage.upsertAll(
+                values = updated.associateBy { it.id.toString() },
+                expiresAt = now + CACHE_EXPIRATION
+            )
+            return@twr updated
+        }
+        return@twr storedList
     }
-
-    private suspend fun getNetworkItems(mode: FetchMode, window: Int): List<ShadedHnItem> {
-        val fullThenShallows = fetchNetworkItems(mode, window)
-
-        val storedList = storage.selectByKey(mode.value)
-            .map { it?.list }
-            .firstOrNull()
-            .orEmpty()
-
-        if (storedList.isEmpty() || fullThenShallows.size > storedList.size) {
-            scope.launch(Dispatchers.IO) {
-                storage.upsert(mode.value, ShadedItemList(fullThenShallows))
-            }
-            return fullThenShallows
-        }
-        val mapping = buildMapping(storedList)
-
-        //copy any Full items into the FullThenShallows list
-        val fullyUpdated = fullThenShallows.fastMap { item ->
-            if (item is ShadedHnItem.Shallow) {
-                when (val fromMapping = mapping[item.id.id]) {
-                    null, is ShadedHnItem.Shallow -> item
-                    else -> fromMapping
-                }
-            } else {
-                item
-            }
-        }
-        scope.launch(Dispatchers.IO) {
-            storage.upsert(mode.value, ShadedItemList(fullyUpdated))
-        }
-        return fullyUpdated
-    }
-
-    private suspend fun fetchNetworkItems(mode: FetchMode, window: Int): List<ShadedHnItem> =
-        withContext(Dispatchers.IO) {
-            val ids = client.getStories(mode)
-            val fulls = ids.take(window).fetchAsync { retry(3) { client.getItem(it) } }
-            val shallows = ItemIdArray(ids.size - window) { i -> ids[window + i] }
-
-            //equivalent to fulls.map(::Full) + shallows.map(::Shallow), but with fewer allocations
-            buildList(ids.size) {
-                fulls.fastForEach { add(ShadedHnItem.Full(it)) }
-                shallows.fastForEach { add(ShadedHnItem.Shallow(it)) }
-            }
-        }
 }
 
-private fun buildMapping(storedList: List<ShadedHnItem>): SparseArray<ShadedHnItem> {
-    val map = SparseArray<ShadedHnItem>(storedList.size)
-    storedList.fastForEach { item ->
-        map.append(item.id.id, item)
-    }
-    return map
-}
+val CACHE_EXPIRATION = 30.minutes
