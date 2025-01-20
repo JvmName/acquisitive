@@ -13,6 +13,7 @@ import app.cash.paging.compose.collectAsLazyPagingItems
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import com.theapache64.rebugger.Rebugger
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.score
@@ -23,6 +24,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
+import logcat.LogPriority
+import logcat.logcat
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
@@ -42,7 +45,7 @@ class MainScreenPresenter(
         var isRefreshing by remember { mutableStateOf(false) }
         if (isRefreshing) {
             LaunchedEffect(fetchMode) {
-                repo.refresh(fetchMode)
+                repo.refresh(fetchMode, DEFAULT_WINDOW * 3)
                 isRefreshing = false
             }
         }
@@ -51,7 +54,7 @@ class MainScreenPresenter(
             pagingFactory(fetchMode)
                 .flow
                 .map { data ->
-                    data.map { item ->
+                    data.map { (item, rank) ->
                         item.toScreenItem(
                             isHot = item.score >= fetchMode.hotThreshold,
                             icon = when {
@@ -61,6 +64,7 @@ class MainScreenPresenter(
                                 item is HnItem.Poll -> "🗳️"
                                 else -> null
                             },
+                            rank = rank,
                             time = (Clock.System.now() - item.time).toDateTimePeriod()
                                 .toAbbreviatedDuration(),
                             urlHost = when (item) {
@@ -74,6 +78,15 @@ class MainScreenPresenter(
         }
 
         val lazyPaged = pagerFlow.collectAsLazyPagingItems(Dispatchers.IO)
+        Rebugger(
+            trackMap = mapOf(
+                "fetchMode" to fetchMode,
+                "isRefreshing" to isRefreshing,
+                "pagerFlow" to pagerFlow,
+                "lazyPaged" to lazyPaged,
+            ),
+            logger = { tag, msg -> logcat(LogPriority.WARN) { "$tag: $msg" } }
+        )
 
         return MainListScreen.MainListState(
             isRefreshing = isRefreshing,

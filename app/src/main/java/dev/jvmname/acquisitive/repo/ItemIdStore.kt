@@ -1,12 +1,10 @@
 package dev.jvmname.acquisitive.repo
 
-import com.mercury.sqkon.db.KeyValueStorage
 import com.mercury.sqkon.db.Sqkon
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.emptyItemIdArray
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
@@ -18,12 +16,9 @@ class ItemIdStore(
     skn: Sqkon,
     private val client: HnClient,
 ) {
-    private val storage = skn.keyValueStorage<ItemIdArray>(
-        name = ItemIdArray::class.simpleName!!,
-        config = KeyValueStorage.Config(dispatcher = Dispatchers.IO)
-    )
+    private val storage = skn.keyValueStorage<ItemIdArray>(name = ItemIdArray::class.simpleName!!)
 
-    suspend fun getIds(fetchMode: FetchMode): ItemIdArray = storage.transactionWithResult twr@{
+    suspend fun getIds(fetchMode: FetchMode): ItemIdArray {
         val ids = storage.selectByKeys(
             listOf(fetchMode.value),
             expiresAfter = Clock.System.now()
@@ -32,9 +27,9 @@ class ItemIdStore(
             .first()
             ?: emptyItemIdArray()
         if (ids.isEmpty()) {
-            return@twr refresh(fetchMode)
+            return refresh(fetchMode)
         }
-        return@twr ids
+        return ids
     }
 
     suspend fun refresh(fetchMode: FetchMode): ItemIdArray {

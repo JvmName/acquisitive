@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.constraintlayout.compose.atLeast
+import androidx.paging.LoadState
 import app.cash.paging.PagingData
 import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
@@ -60,8 +62,10 @@ import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.parcelize.Parcelize
+import logcat.LogPriority
+import logcat.logcat
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
 private val CELL_HEIGHT = 200.dp
@@ -87,41 +91,35 @@ sealed class MainListEvent : CircuitUiEvent {
 @[Composable CircuitInject(MainListScreen::class, AppScope::class)]
 fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Modifier) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = { TopAppBar(title = { Text(state.fetchMode.name) }) }) { innerPadding ->
 
-       PullToRefreshBox(
-           isRefreshing = false,
-           onRefresh = { state.eventSink(MainListEvent.Refresh) }
-       ) {
-           LazyColumn(
-               modifier = Modifier
-                   .padding(innerPadding)
-                   .fillMaxSize(),
-           ) {
-               val paged = state.pagedStories
+        PullToRefreshBox(
+            modifier = modifier.padding(innerPadding),
+            isRefreshing = false,
+            onRefresh = { state.eventSink(MainListEvent.Refresh) }
+        ) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                when (state.pagedStories.loadState.refresh) {
+                    is LoadState.Error -> logcat(LogPriority.WARN) { "loadState: Error" }
+                    LoadState.Loading -> logcat(LogPriority.WARN) { "loadState: Loading" }
+                    is LoadState.NotLoading -> logcat(LogPriority.WARN) { "loadState: NotLoading" }
+                }
+                val paged = state.pagedStories
+                items(
+                    count = paged.itemCount,
+                    key = paged.itemKey { it.id },
+                    itemContent = { index ->
+                        logcat(LogPriority.WARN) { "drawing $index" }
+                        when (val item = paged[index]) {
+                            null -> Spacer(modifier.height(CELL_HEIGHT))
+                            else -> MainListItem(modifier, item, state.eventSink)
+                        }
 
-               items(
-                   count = paged.itemCount,
-                   key = paged.itemKey { it.id },
-                   itemContent = { index ->
-                       val item = paged[index]
-                       when (item) {
-                           null -> TODO("placeholder")
-                           else -> {
-                               when (item) {
-                                   //don't love doing this here but it's easiest for now
-                                   is HnScreenItem.StoryItem -> item.rank = index + 1
-                                   else -> Unit
-                               }
-                               MainListItem(modifier, item, state.eventSink)
-                           }
-                       }
-
-                   }
-               )
-           }
-       }
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -336,11 +334,11 @@ fun PreviewMainListItem() {
 
 @[Preview Composable]
 fun PreviewMainList() {
-    val paged = emptyFlow<PagingData<HnScreenItem>>().collectAsLazyPagingItems()
+    val paged = remember {
+        flowOf(PagingData.from(List(15) { storyItem(it) }))
+    }.collectAsLazyPagingItems()
+
     val state = remember {
-        val list = listOf(HnScreenItem.Shallow(ItemId(-1))) + List(15) {
-            storyItem(it)
-        }
         MainListScreen.MainListState(false, FetchMode.TOP, paged) {}
     }
     AcquisitiveTheme(darkTheme = true) {
@@ -348,16 +346,17 @@ fun PreviewMainList() {
     }
 }
 
-private fun storyItem(it: Int) = HnScreenItem.StoryItem(
-    id = ItemId(it),
+private fun storyItem(id: Int): HnScreenItem = HnScreenItem.StoryItem(
+    id = ItemId(id),
     title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
     isHot = true,
     score = 950,
     urlHost = "github.com",
-    numChildren = 121 + it,
+    numChildren = 121 + id,
     time = "19h",
     author = "JvmName",
     isDead = false,
     isDeleted = false,
     titleSuffix = "💼",
+    rank = id
 )

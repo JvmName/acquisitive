@@ -10,18 +10,10 @@ import kotlinx.datetime.Instant
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 
-@[Immutable Serializable]
-sealed interface ShadedHnItem {
-    @[JvmInline Serializable]
-    value class Shallow(val item: ItemId) : ShadedHnItem
-
-    @[JvmInline Serializable]
-    value class Full(val item: HnItem) : ShadedHnItem
-}
-
-
 @[JvmInline Parcelize Immutable Serializable JsonClass(generateAdapter = false)]
-value class ItemId(val id: Int) : Parcelable
+value class ItemId(val id: Int) : Parcelable {
+    override fun toString(): String = id.toString()
+}
 
 @[Immutable Serializable JsonClass(generateAdapter = true, generator = "sealed:type")]
 sealed interface HnItem {
