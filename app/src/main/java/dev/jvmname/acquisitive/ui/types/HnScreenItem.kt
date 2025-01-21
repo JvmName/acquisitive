@@ -5,7 +5,6 @@ import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.network.model.getDisplayedTitle
-import kotlin.properties.Delegates
 
 @Immutable
 sealed interface HnScreenItem {
@@ -20,6 +19,7 @@ sealed interface HnScreenItem {
         val title: String,
         val isHot: Boolean,
         val score: Int,
+        val rank: Int,
         val urlHost: String?,
         val numChildren: Int,
         val time: String,
@@ -28,7 +28,6 @@ sealed interface HnScreenItem {
         val isDeleted: Boolean,
         val titleSuffix: String?,
     ) : HnScreenItem{
-        var rank by Delegates.notNull<Int>()
     }
 
     @[Poko Immutable]
@@ -45,6 +44,7 @@ sealed interface HnScreenItem {
 fun HnItem.toScreenItem(
     isHot: Boolean,
     time: String,
+    rank: Int,
     urlHost: String?,
     icon: String? = null,
 ): HnScreenItem = when (this) {
@@ -68,6 +68,7 @@ fun HnItem.toScreenItem(
             is HnItem.PollOption -> score
             else -> 0
         },
+        rank = rank,
         urlHost = urlHost,
         numChildren = kids?.size ?: 0,
         time = time,

@@ -182,13 +182,4 @@ fun HnItem.copy(
         text = text,
         score = score
     )
-}
-
-fun ItemId.shaded() = ShadedHnItem.Shallow(this)
-fun HnItem.shaded() = ShadedHnItem.Full(this)
-
-val ShadedHnItem.id: ItemId
-    get() = when (this) {
-        is ShadedHnItem.Full -> item.id
-        is ShadedHnItem.Shallow -> item
-    }
+}*/

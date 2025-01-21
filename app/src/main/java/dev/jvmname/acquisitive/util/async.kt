@@ -1,10 +1,16 @@
 package dev.jvmname.acquisitive.util
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.RememberObserver
+import com.slack.circuit.retained.rememberRetained
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import logcat.asLog
@@ -45,4 +51,25 @@ suspend fun <T> retry(
         currentDelay = (currentDelay * factor).coerceAtMost(maxDelay)
     }
     return block() // last attempt
+}
+
+// https://chrisbanes.me/posts/retaining-beyond-viewmodels/
+@Composable
+fun rememberRetainedCoroutineScope(): CoroutineScope {
+    return rememberRetained("coroutine_scope") {
+        object : RememberObserver {
+            val scope = CoroutineScope(Dispatchers.Main + Job())
+
+            override fun onForgotten() {
+                // We've been forgotten, cancel the CoroutineScope
+                scope.cancel()
+            }
+
+            // Not called by Circuit
+            override fun onAbandoned() = Unit
+
+            // Nothing to do here
+            override fun onRemembered() = Unit
+        }
+    }.scope
 }

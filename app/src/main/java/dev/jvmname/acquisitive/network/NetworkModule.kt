@@ -4,11 +4,9 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.addAdapter
 import dev.jvmname.acquisitive.network.adapters.IdAdapter
 import dev.jvmname.acquisitive.network.adapters.InstantAdapter
-import kotlinx.datetime.Instant
 import logcat.logcat
 import me.tatarka.inject.annotations.Inject
 import me.tatarka.inject.annotations.Provides
-import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -16,8 +14,9 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
-import java.io.File
 import kotlin.reflect.KClass
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 @ContributesTo(AppScope::class)
 interface NetworkComponent {
@@ -39,6 +38,10 @@ interface NetworkComponent {
             .addNetworkInterceptor(HttpLoggingInterceptor { logcat(tag = "OkhttpInterceptor") { it } }.apply {
                 level = HttpLoggingInterceptor.Level.BASIC
             })
+            .callTimeout(30.seconds.toJavaDuration())
+            .readTimeout(30.seconds.toJavaDuration())
+            .writeTimeout(30.seconds.toJavaDuration())
+            .connectTimeout(30.seconds.toJavaDuration())
             .build()
     }
 

@@ -1,16 +1,18 @@
 package dev.jvmname.acquisitive.repo
 
 import app.cash.paging.PagingSource
+import com.mercury.sqkon.db.OrderBy
+import com.mercury.sqkon.db.OrderDirection
 import com.mercury.sqkon.db.Sqkon
 import com.mercury.sqkon.db.inList
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.fetchAsync
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.datetime.Clock
 import me.tatarka.inject.annotations.Inject
-import java.util.TreeMap
 import kotlin.time.Duration.Companion.minutes
 
 @Inject
@@ -23,7 +25,8 @@ class HnItemStore(
     fun pagingSource(ids: ItemIdArray): PagingSource<Int, HnItemEntity> {
         return storage.selectPagingSource(
             HnItemEntity::idStr.inList(ids.map(ItemId::toString)),
-            expiresAfter = Clock.System.now() + CACHE_EXPIRATION
+            orderBy = listOf(OrderBy(HnItemEntity::responseIndex, OrderDirection.ASC))
+//            expiresAfter = Clock.System.now() + CACHE_EXPIRATION
         )
     }
 
@@ -37,7 +40,7 @@ class HnItemStore(
         val keys = ids.map { it.id.toString() }
 
         val storedList = if (refresh) {
-            storage.deleteExpired()
+
             emptyList()
         } else {
             storage.selectByKeys(keys, expiresAfter = now).firstOrNull() ?: emptyList()
@@ -47,7 +50,7 @@ class HnItemStore(
             val updated = ids.fetchAsync { client.getItem(it) }
                 .mapIndexed { i, item -> item.toEntity(i) }
             storage.upsertAll(
-                values = updated.associateByTo(TreeMap(), HnItemEntity::idStr),
+                values = updated.associateBy(HnItemEntity::idStr),
                 expiresAt = now + CACHE_EXPIRATION
             )
             return updated

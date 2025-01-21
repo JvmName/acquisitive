@@ -8,19 +8,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.paging.cachedIn
 import androidx.paging.map
 import app.cash.paging.compose.collectAsLazyPagingItems
 import com.slack.circuit.codegen.annotations.CircuitInject
+import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.theapache64.rebugger.Rebugger
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.score
+import dev.jvmname.acquisitive.repo.HnItemPagerFactory
 import dev.jvmname.acquisitive.repo.HnItemRepository
+import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import dev.jvmname.acquisitive.ui.types.toScreenItem
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.map
+import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onEach
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
@@ -30,6 +36,7 @@ import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
+@Suppress("NOTHING_TO_INLINE")
 @[Inject CircuitInject(MainListScreen::class, AppScope::class)]
 class MainScreenPresenter(
     private val pagingFactory: HnItemPagerFactory,
@@ -40,7 +47,7 @@ class MainScreenPresenter(
 
     @Composable
     override fun present(): MainListScreen.MainListState {
-        val fetchMode = remember { screen.fetchMode }
+        val fetchMode = rememberRetained { screen.fetchMode }
 
         var isRefreshing by remember { mutableStateOf(false) }
         if (isRefreshing) {
@@ -51,9 +58,13 @@ class MainScreenPresenter(
         }
 
         val pagerFlow = remember(fetchMode) {
+        val presenterScope = rememberRetainedCoroutineScope()
+
+        val lazyPaged = rememberRetained(fetchMode) {
             pagingFactory(fetchMode)
                 .flow
                 .map { data ->
+                .mapLatest { data ->
                     data.map { (item, rank) ->
                         item.toScreenItem(
                             isHot = item.score >= fetchMode.hotThreshold,
@@ -75,19 +86,20 @@ class MainScreenPresenter(
                         )
                     }
                 }
+                .cachedIn(presenterScope)
+        }.collectAsLazyPagingItems()
+
         }
 
-        val lazyPaged = pagerFlow.collectAsLazyPagingItems(Dispatchers.IO)
         Rebugger(
             trackMap = mapOf(
                 "fetchMode" to fetchMode,
                 "isRefreshing" to isRefreshing,
-                "pagerFlow" to pagerFlow,
+                "presenterScope" to presenterScope,
                 "lazyPaged" to lazyPaged,
             ),
             logger = { tag, msg -> logcat(LogPriority.WARN) { "$tag: $msg" } }
         )
-
         return MainListScreen.MainListState(
             isRefreshing = isRefreshing,
             fetchMode = fetchMode,
@@ -132,8 +144,9 @@ class MainScreenPresenter(
         }
 
         @VisibleForTesting
-        internal fun extractUrlHost(url: String): String = try {
-            Uri.parse(url).host
+        internal inline fun extractUrlHost(url: String): String = try {
+            if (url.isBlank()) ""
+            else Uri.parse(url).host
                 .orEmpty()
                 .removePrefix("www.")
         } catch (e: Exception) {

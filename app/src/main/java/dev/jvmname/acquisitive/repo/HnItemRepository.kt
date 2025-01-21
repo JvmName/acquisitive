@@ -1,8 +1,10 @@
 package dev.jvmname.acquisitive.repo
 
-import androidx.paging.PagingState
 import app.cash.paging.PagingSource
 import dev.jvmname.acquisitive.network.model.FetchMode
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import me.tatarka.inject.annotations.Inject
 
 @Inject
@@ -11,11 +13,8 @@ class HnItemRepository(
     private val itemStore: HnItemStore,
 ) {
 
-    fun pagingSource(mode: FetchMode): suspend () -> PagingSource<Int, HnItemAndRank> {
-        return suspend {
-            val inner = itemStore.pagingSource(idStore.getIds(mode))
-            MappingPagingSource(inner, HnItemEntity::toItem)
-        }
+    fun pagingSource(mode: FetchMode): suspend () -> PagingSource<Int, HnItemEntity> {
+        return suspend { itemStore.pagingSource(idStore.getIds(mode)) }
     }
 
     suspend fun refresh(fetchMode: FetchMode, window: Int): List<HnItemAndRank> {
@@ -37,12 +36,6 @@ class HnItemRepository(
         val sliced = ids.slice(start..end)
         return itemStore.getItemRange(sliced)
     }
-}
-
-class MappingPagingSource(
-    private val delegate: PagingSource<Int, HnItemEntity>,
-    private val mapper: (HnItemEntity) -> HnItemAndRank,
-) : PagingSource<Int, HnItemAndRank>() {
 
     override val jumpingSupported = true
 
