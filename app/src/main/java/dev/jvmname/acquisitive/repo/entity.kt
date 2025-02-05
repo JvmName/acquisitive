@@ -1,6 +1,7 @@
 package dev.jvmname.acquisitive.repo
 
 import dev.drewhamilton.poko.Poko
+import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
@@ -10,8 +11,8 @@ import kotlinx.serialization.Serializable
 @[Poko Serializable]
 class HnItemEntity(
     val id: Int,
-    val idStr: String,
     val responseIndex: Int,
+    val fetchMode: FetchMode,
     val type: String,  // "story", "comment", "job", "poll", "pollopt"
     val author: String?,
     val time: Instant,
@@ -106,7 +107,7 @@ fun HnItemEntity.toItem(): HnItemAndRank {
 }
 
 
-fun HnItem.toEntity(index: Int): HnItemEntity {
+fun HnItem.toEntity(index: Int, mode: FetchMode): HnItemEntity {
     val type = when (this) {
         is HnItem.Story -> "story"
         is HnItem.Comment -> "comment"
@@ -117,8 +118,8 @@ fun HnItem.toEntity(index: Int): HnItemEntity {
 
     return HnItemEntity(
         id = id.id,
-        idStr = id.toString(),
         responseIndex = index,
+        fetchMode = mode,
         type = type,
         author = by,
         time = time,

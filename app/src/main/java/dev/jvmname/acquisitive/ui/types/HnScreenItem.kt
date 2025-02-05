@@ -11,9 +11,6 @@ sealed interface HnScreenItem {
     val id: ItemId
 
     @[Poko Immutable]
-    class Shallow(override val id: ItemId) : HnScreenItem
-
-    @[Poko Immutable]
     class StoryItem(
         override val id: ItemId,
         val title: String,

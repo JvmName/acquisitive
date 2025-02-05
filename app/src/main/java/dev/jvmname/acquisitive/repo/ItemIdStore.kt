@@ -21,7 +21,7 @@ class ItemIdStore(
     suspend fun getIds(fetchMode: FetchMode): ItemIdArray {
         val ids = storage.selectByKeys(
             listOf(fetchMode.value),
-            expiresAfter = Clock.System.now()
+            expiresAfter = futureExpiry
         )
             .map { it.firstOrNull() }
             .first()
@@ -38,10 +38,12 @@ class ItemIdStore(
         storage.upsert(
             fetchMode.value,
             updatedIds,
-            expiresAt = now + CACHE_EXPIRATION
+            expiresAt = futureExpiry
         )
         return updatedIds
     }
 
-
+    suspend fun clearExpired() {
+        storage.deleteExpired(Clock.System.now())
+    }
 }

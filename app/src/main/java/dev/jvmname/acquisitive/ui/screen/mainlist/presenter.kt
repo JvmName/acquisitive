@@ -21,12 +21,10 @@ import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.score
 import dev.jvmname.acquisitive.repo.HnItemPagerFactory
 import dev.jvmname.acquisitive.repo.HnItemRepository
-import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.onEach
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
@@ -57,13 +55,18 @@ class MainScreenPresenter(
             }
         }
 
-        val pagerFlow = remember(fetchMode) {
         val presenterScope = rememberRetainedCoroutineScope()
+
+        LaunchedEffect(fetchMode) {
+            repo.stream(fetchMode)
+                .collectLatest {
+                    println("New items from stream: ${it.size}")
+                }
+        }
 
         val lazyPaged = rememberRetained(fetchMode) {
             pagingFactory(fetchMode)
                 .flow
-                .map { data ->
                 .mapLatest { data ->
                     data.map { (item, rank) ->
                         item.toScreenItem(
@@ -88,8 +91,6 @@ class MainScreenPresenter(
                 }
                 .cachedIn(presenterScope)
         }.collectAsLazyPagingItems()
-
-        }
 
         Rebugger(
             trackMap = mapOf(

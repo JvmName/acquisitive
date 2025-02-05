@@ -1,5 +1,6 @@
 package dev.jvmname.acquisitive.repo
 
+import androidx.compose.ui.util.fastMap
 import androidx.paging.LoadType
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -7,7 +8,6 @@ import androidx.paging.PagingState
 import app.cash.paging.PagingSource
 import app.cash.paging.RemoteMediator
 import dev.jvmname.acquisitive.network.model.FetchMode
-import kotlinx.coroutines.runBlocking
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import retrofit2.HttpException
@@ -20,13 +20,11 @@ class HnItemPagerFactory(
     private val repo: HnItemRepository,
 ) {
     operator fun invoke(mode: FetchMode): Pager<Int, HnItemAndRank> {
-        return Pager(config = PagingConfig(pageSize = 24, enablePlaceholders = false),
+        return Pager(config = PagingConfig(pageSize = 24, enablePlaceholders = true),
             remoteMediator = mediatorFactory(mode),
             pagingSourceFactory = {
-                runBlocking {
-                    val inner = repo.pagingSource(mode).invoke()
-                    MappingPagingSource(inner, HnItemEntity::toItem)
-                }
+                val innerFactory = repo.pagingSource(mode)
+                MappingPagingSource(innerFactory(), HnItemEntity::toItem)
             })
     }
 }
@@ -37,7 +35,11 @@ class HnItemMediator(
     private val repo: HnItemRepository,
 ) : RemoteMediator<Int, HnItemAndRank>() {
 
-    override suspend fun initialize(): InitializeAction = InitializeAction.LAUNCH_INITIAL_REFRESH
+    //https://issuetracker.google.com/issues/391414839
+    override suspend fun initialize(): InitializeAction {
+//        repo.clearExpired()
+        return InitializeAction.SKIP_INITIAL_REFRESH
+    }
 
     override suspend fun load(
         loadType: LoadType,
@@ -47,16 +49,15 @@ class HnItemMediator(
             val endOfPage = when (loadType) {
                 LoadType.PREPEND -> return MediatorResult.Success(endOfPaginationReached = true)
                 LoadType.APPEND -> {
-                    val offset = state.lastItemOrNull()
-                    val windowIndex = ((offset?.rank ?: 0) - 1).coerceAtLeast(0)
-
+                    val rank = state.lastItemOrNull()?.rank ?: 0
+                    val startIndex = (rank - 1).coerceAtLeast(0)
                     //anything more to load?
                     val list = repo.computeWindow(
                         fetchMode = mode,
-                        start = windowIndex,
+                        start = startIndex,
                         loadSize = state.config.pageSize
                     ) ?: return MediatorResult.Success(endOfPaginationReached = true)
-                    list.isEmpty() || windowIndex == list.lastIndex
+                    list.isEmpty() || startIndex == list.last().responseIndex
                 }
 
                 LoadType.REFRESH -> repo.refresh(
@@ -80,7 +81,7 @@ class MappingPagingSource(
 ) : PagingSource<Int, HnItemAndRank>() {
 
     init {
-        //insane bidirectional mapping of invalidations because you can't "map" a PagingSOurce
+        //insane bidirectional mapping of invalidations because you can't "map" a PagingSource
         delegate.registerInvalidatedCallback { invalidate() }
         registerInvalidatedCallback { delegate.invalidate() }
     }
@@ -97,7 +98,7 @@ class MappingPagingSource(
             is LoadResult.Error -> LoadResult.Error(load.throwable)
             is LoadResult.Invalid -> LoadResult.Invalid()
             is LoadResult.Page -> LoadResult.Page(
-                data = load.data.map(mapper).sortedBy { it.rank },
+                data = load.data.fastMap(mapper).sortedBy { it.rank },
                 prevKey = load.prevKey,
                 nextKey = load.nextKey,
                 itemsBefore = load.itemsBefore,

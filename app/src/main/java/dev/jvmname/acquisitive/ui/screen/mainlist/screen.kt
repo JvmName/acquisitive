@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -97,7 +96,10 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
         PullToRefreshBox(
             modifier = modifier.padding(innerPadding),
             isRefreshing = false,
-            onRefresh = { state.eventSink(MainListEvent.Refresh) }
+            onRefresh = {
+                //todo:lazypagingitems refresh
+                state.eventSink(MainListEvent.Refresh)
+            }
         ) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 when (state.pagedStories.loadState.refresh) {
@@ -112,7 +114,23 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
                     itemContent = { index ->
                         logcat(LogPriority.WARN) { "drawing $index" }
                         when (val item = paged[index]) {
-                            null -> Spacer(modifier.height(CELL_HEIGHT))
+                            null -> {
+                                OutlinedCard(
+                                    modifier = modifier
+                                        .heightIn(max = CELL_HEIGHT)
+                                        .fillMaxWidth()
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .heightIn(max = CELL_HEIGHT - 16.dp)
+                                            .align(Alignment.CenterHorizontally)
+                                            .padding(vertical = 8.dp),
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                }
+                            }
+
                             else -> MainListItem(modifier, item, state.eventSink)
                         }
 
@@ -130,23 +148,6 @@ fun MainListItem(
     eventSink: (MainListEvent) -> Unit,
 ) {
     when (item) {
-        is HnScreenItem.Shallow -> {
-            OutlinedCard(
-                modifier = modifier
-                    .heightIn(max = CELL_HEIGHT)
-                    .fillMaxWidth()
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .heightIn(max = CELL_HEIGHT - 16.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.secondary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                )
-            }
-        }
-
         is HnScreenItem.StoryItem -> OutlinedCard(modifier = modifier) {
             ConstraintLayout(
                 modifier = modifier

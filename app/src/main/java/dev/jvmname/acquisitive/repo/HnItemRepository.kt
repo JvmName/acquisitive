@@ -1,10 +1,12 @@
 package dev.jvmname.acquisitive.repo
 
-import app.cash.paging.PagingSource
+import androidx.compose.ui.util.fastMap
+import app.cash.paging.PagingSourceFactory
 import dev.jvmname.acquisitive.network.model.FetchMode
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.runBlocking
 import me.tatarka.inject.annotations.Inject
 
 @Inject
@@ -13,14 +15,17 @@ class HnItemRepository(
     private val itemStore: HnItemStore,
 ) {
 
-    fun pagingSource(mode: FetchMode): suspend () -> PagingSource<Int, HnItemEntity> {
-        return suspend { itemStore.pagingSource(idStore.getIds(mode)) }
+    fun pagingSource(mode: FetchMode): PagingSourceFactory<Int, HnItemEntity> {
+        return PagingSourceFactory {
+            runBlocking { itemStore.pagingSource(idStore.getIds(mode), mode) }
+        }
     }
 
     suspend fun refresh(fetchMode: FetchMode, window: Int): List<HnItemAndRank> {
         val ids = idStore.refresh(fetchMode)
         val sliced = ids.slice(0..window)
-        return itemStore.getItemRange(sliced, refresh = true).map(HnItemEntity::toItem)
+        return itemStore.getItemRange(sliced, fetchMode, 0, refresh = true)
+            .fastMap(HnItemEntity::toItem)
     }
 
     suspend fun computeWindow(
@@ -34,28 +39,18 @@ class HnItemRepository(
         if (start !in indices) return null // nothing to load
         val end = (start + loadSize).coerceIn(indices)
         val sliced = ids.slice(start..end)
-        return itemStore.getItemRange(sliced)
+        return itemStore.getItemRange(sliced, fetchMode, start)
     }
 
-    override val jumpingSupported = true
-
-    override fun getRefreshKey(state: PagingState<Int, HnItemAndRank>): Int? {
-        return state.anchorPosition
-            ?.let { maxOf(0, it - (state.config.initialLoadSize / 2)) }
-    }
-
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, HnItemAndRank> {
-        val load = delegate.load(params)
-        return when (load) {
-            is LoadResult.Error -> LoadResult.Error(load.throwable)
-            is LoadResult.Invalid -> LoadResult.Invalid()
-            is LoadResult.Page -> LoadResult.Page(
-                data = load.data.map(mapper),
-                prevKey = load.prevKey,
-                nextKey = load.nextKey,
-                itemsBefore = load.itemsBefore,
-                itemsAfter = load.itemsAfter
-            )
+    fun stream(fetchMode: FetchMode): Flow<List<HnItemEntity>> {
+        return flow {
+            val ids = idStore.getIds(fetchMode)
+            emitAll(itemStore.stream(fetchMode, ids))
         }
+    }
+
+    suspend fun clearExpired() {
+        idStore.clearExpired()
+        itemStore.clearExpired()
     }
 }
