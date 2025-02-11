@@ -23,8 +23,11 @@ import dev.jvmname.acquisitive.repo.HnItemPagerFactory
 import dev.jvmname.acquisitive.repo.HnItemRepository
 import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
@@ -33,6 +36,7 @@ import logcat.logcat
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
+import kotlin.time.Duration.Companion.seconds
 
 @Suppress("NOTHING_TO_INLINE")
 @[Inject CircuitInject(MainListScreen::class, AppScope::class)]
@@ -45,24 +49,15 @@ class MainScreenPresenter(
 
     @Composable
     override fun present(): MainListScreen.MainListState {
-        val fetchMode = rememberRetained { screen.fetchMode }
-
-        var isRefreshing by remember { mutableStateOf(false) }
-        if (isRefreshing) {
-            LaunchedEffect(fetchMode) {
-                repo.refresh(fetchMode, DEFAULT_WINDOW * 3)
-                isRefreshing = false
-            }
-        }
-
+        var fetchMode by rememberRetained { mutableStateOf(screen.fetchMode) }
         val presenterScope = rememberRetainedCoroutineScope()
-
-        LaunchedEffect(fetchMode) {
-            repo.stream(fetchMode)
-                .collectLatest {
-                    println("New items from stream: ${it.size}")
-                }
-        }
+        var isRefreshing by remember { mutableStateOf(false) }
+//        LaunchedEffect(fetchMode) {
+//            repo.stream(fetchMode)
+//                .collectLatest {
+//                    println("New items from stream: ${it.size}")
+//                }
+//        }
 
         val lazyPaged = rememberRetained(fetchMode) {
             pagingFactory(fetchMode)
@@ -90,7 +85,17 @@ class MainScreenPresenter(
                     }
                 }
                 .cachedIn(presenterScope)
-        }.collectAsLazyPagingItems()
+        }.collectAsLazyPagingItems(Dispatchers.IO)
+
+        if (isRefreshing) {
+            LaunchedEffect(fetchMode) {
+                presenterScope.launch(Dispatchers.IO) {
+                    lazyPaged.refresh()
+                    withTimeoutOrNull(3.seconds) { repo.stream(fetchMode).first() }
+                    isRefreshing = false
+                }
+            }
+        }
 
         Rebugger(
             trackMap = mapOf(
@@ -112,6 +117,9 @@ class MainScreenPresenter(
                 MainListEvent.FavoriteClick -> TODO()
                 MainListEvent.UpvoteClick -> TODO()
                 MainListEvent.Refresh -> isRefreshing = true
+                is MainListEvent.FetchModeChanged -> {
+                    fetchMode = event.fetchMode
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ package dev.jvmname.acquisitive.ui.screen.mainlist
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Comment
@@ -42,12 +44,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.constraintlayout.compose.atLeast
 import androidx.paging.LoadState
+import androidx.paging.LoadStates
 import app.cash.paging.PagingData
 import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
@@ -58,16 +60,19 @@ import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.ItemId
+import dev.jvmname.acquisitive.ui.ThemePreviews
+import dev.jvmname.acquisitive.ui.common.LargeDropdownMenu
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
+import dev.jvmname.acquisitive.util.capitalize
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.parcelize.Parcelize
 import logcat.LogPriority
 import logcat.logcat
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
-private val CELL_HEIGHT = 200.dp
+private val CELL_HEIGHT = 75.dp
 
 @Parcelize
 data class MainListScreen(val fetchMode: FetchMode = FetchMode.TOP) : Screen {
@@ -80,6 +85,7 @@ data class MainListScreen(val fetchMode: FetchMode = FetchMode.TOP) : Screen {
 }
 
 sealed class MainListEvent : CircuitUiEvent {
+    data class FetchModeChanged(val fetchMode: FetchMode) : MainListEvent()
     data object FavoriteClick : MainListEvent()
     data object UpvoteClick : MainListEvent()
     data object CommentsClick : MainListEvent()
@@ -91,53 +97,75 @@ sealed class MainListEvent : CircuitUiEvent {
 fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Modifier) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { TopAppBar(title = { Text(state.fetchMode.name) }) }) { innerPadding ->
+        topBar = { FetchModeSwitcher(state) }) { innerPadding ->
 
         PullToRefreshBox(
-            modifier = modifier.padding(innerPadding),
-            isRefreshing = false,
-            onRefresh = {
-                //todo:lazypagingitems refresh
-                state.eventSink(MainListEvent.Refresh)
-            }
+            modifier = modifier
+                .padding(top = 16.dp)
+                .padding(innerPadding),
+            isRefreshing = state.isRefreshing,
+            onRefresh = { state.eventSink(MainListEvent.Refresh) }
         ) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                when (state.pagedStories.loadState.refresh) {
-                    is LoadState.Error -> logcat(LogPriority.WARN) { "loadState: Error" }
-                    LoadState.Loading -> logcat(LogPriority.WARN) { "loadState: Loading" }
-                    is LoadState.NotLoading -> logcat(LogPriority.WARN) { "loadState: NotLoading" }
+            when (state.pagedStories.loadState.refresh) {
+                is LoadState.Loading -> {
+                    logcat(LogPriority.WARN) { "loadState: Loading" }
+                    Progress(Modifier.padding(top = 16.dp))
                 }
-                val paged = state.pagedStories
-                items(
-                    count = paged.itemCount,
-                    key = paged.itemKey { it.id },
-                    itemContent = { index ->
-                        logcat(LogPriority.WARN) { "drawing $index" }
-                        when (val item = paged[index]) {
-                            null -> {
-                                OutlinedCard(
-                                    modifier = modifier
-                                        .heightIn(max = CELL_HEIGHT)
-                                        .fillMaxWidth()
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier
-                                            .heightIn(max = CELL_HEIGHT - 16.dp)
-                                            .align(Alignment.CenterHorizontally)
-                                            .padding(vertical = 8.dp),
-                                        color = MaterialTheme.colorScheme.secondary,
-                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    )
-                                }
+
+                else -> {
+                    logcat(LogPriority.WARN) { "loadState: NotLoading" }
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        val paged = state.pagedStories
+                        items(
+                            count = paged.itemCount,
+                            key = paged.itemKey { it.id },
+                            itemContent = { index ->
+                                MainListItem(
+                                    modifier,
+                                    paged[index] ?: return@items,
+                                    state.eventSink
+                                )
                             }
-
-                            else -> MainListItem(modifier, item, state.eventSink)
-                        }
-
+                        )
                     }
-                )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun FetchModeSwitcher(state: MainListScreen.MainListState) {
+    TopAppBar(
+        modifier = Modifier.wrapContentHeight(),
+        title = {
+            LargeDropdownMenu(
+                modifier = Modifier.fillMaxWidth(0.55f),
+                items = FetchMode.entries,
+                selectedIndex = FetchMode.entries.indexOf(state.fetchMode),
+                selectedItemToString = { it.value.capitalize() },
+                onItemSelected = { _, item ->
+                    state.eventSink(MainListEvent.FetchModeChanged(item))
+                },
+                label = "Mode",
+            )
+        })
+}
+
+@Composable
+private fun BoxScope.Progress(modifier: Modifier) {
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .align(Alignment.Center)
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier
+                .padding(vertical = 24.dp)
+                .align(Alignment.CenterHorizontally),
+            color = MaterialTheme.colorScheme.secondary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
     }
 }
 
@@ -322,9 +350,10 @@ private fun buildTitleText(item: HnScreenItem.StoryItem): String {
     }
 }
 
-@[Preview Composable]
+@Composable
+@ThemePreviews
 fun PreviewMainListItem() {
-    AcquisitiveTheme(darkTheme = true) {
+    AcquisitiveTheme {
         MainListItem(
             Modifier,
             storyItem(1234),
@@ -333,16 +362,26 @@ fun PreviewMainListItem() {
     }
 }
 
-@[Preview Composable]
+@Composable
+@ThemePreviews
 fun PreviewMainList() {
     val paged = remember {
-        flowOf(PagingData.from(List(15) { storyItem(it) }))
+        val nl = LoadState.NotLoading(true)
+        flowOf(
+            PagingData.from(
+                List(15) { storyItem(it) },
+                sourceLoadStates = LoadStates(nl, nl, nl),
+                mediatorLoadStates = LoadStates(nl, nl, nl),
+
+                )
+        )
     }.collectAsLazyPagingItems()
+
 
     val state = remember {
         MainListScreen.MainListState(false, FetchMode.TOP, paged) {}
     }
-    AcquisitiveTheme(darkTheme = true) {
+    AcquisitiveTheme {
         MainListContent(state)
     }
 }

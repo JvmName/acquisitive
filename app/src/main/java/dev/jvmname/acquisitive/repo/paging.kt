@@ -86,7 +86,7 @@ class MappingPagingSource(
         registerInvalidatedCallback { delegate.invalidate() }
     }
 
-    override val jumpingSupported = true
+    override val jumpingSupported = delegate.jumpingSupported
 
     override fun getRefreshKey(state: PagingState<Int, HnItemAndRank>): Int? {
         return state.anchorPosition

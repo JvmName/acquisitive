@@ -16,8 +16,14 @@ import kotlinx.coroutines.delay
 import logcat.asLog
 import logcat.logcat
 import java.io.IOException
+import java.util.Locale
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+
+fun String.capitalize(): String = replaceFirstChar {
+    if (it.isLowerCase()) it.titlecase(Locale.getDefault())
+    else it.toString()
+}
 
 
 //https://androidstudygroup.slack.com/archives/C03MHQ3NU/p1666367020309989
