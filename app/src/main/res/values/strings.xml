@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Acquisitive</string>
+    <string name="stories_dropdown">%1$s Stories</string>
+
+    <string-array name="fetch_mode">
+        <item>Top</item>
+        <item>New</item>
+        <item>Ask</item>
+        <item>Show</item>
+        <item>Jobs</item>
+        <item>Best</item>
+    </string-array>
 </resources>

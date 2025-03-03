@@ -4,23 +4,23 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class FetchMode(val value: String) {
-    @SerialName("top")
-    TOP("top"),
+enum class FetchMode {
+    @SerialName("TOP")
+    TOP,
 
-    @SerialName("new")
-    NEW("new"),
+    @SerialName("NEW")
+    NEW,
 
-    @SerialName("ask")
-    ASK("ask"),
+    @SerialName("ASK")
+    ASK,
 
-    @SerialName("show")
-    SHOW("show"),
+    @SerialName("SHOW")
+    SHOW,
 
-    @SerialName("jobs")
-    JOBS("jobs"),
+    @SerialName("JOBS")
+    JOBS,
 
-    @SerialName("best")
-    BEST("best"),
+    @SerialName("BEST")
+    BEST,
 
 }

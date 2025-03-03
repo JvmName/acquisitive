@@ -94,6 +94,7 @@ fun <T> LargeDropdownMenu(
                     modifier = Modifier.rotate(rotation)
                 )
             },
+            textStyle = MaterialTheme.typography.titleLarge,
             onValueChange = { },
             readOnly = true,
         )

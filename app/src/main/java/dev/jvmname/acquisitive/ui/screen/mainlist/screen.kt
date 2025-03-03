@@ -39,12 +39,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastMap
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.constraintlayout.compose.atLeast
@@ -58,6 +60,7 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
+import dev.jvmname.acquisitive.R
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.ui.ThemePreviews
@@ -65,7 +68,6 @@ import dev.jvmname.acquisitive.ui.common.LargeDropdownMenu
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
-import dev.jvmname.acquisitive.util.capitalize
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.parcelize.Parcelize
 import logcat.LogPriority
@@ -136,16 +138,16 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
 
 @Composable
 private fun FetchModeSwitcher(state: MainListScreen.MainListState) {
+    val resources = LocalContext.current.resources
     TopAppBar(
         modifier = Modifier.wrapContentHeight(),
         title = {
             LargeDropdownMenu(
                 modifier = Modifier.fillMaxWidth(0.55f),
-                items = FetchMode.entries,
+                items = FetchMode.entries.fastMap { resources.getString(R.string.stories_dropdown, it)  },
                 selectedIndex = FetchMode.entries.indexOf(state.fetchMode),
-                selectedItemToString = { it.value.capitalize() },
-                onItemSelected = { _, item ->
-                    state.eventSink(MainListEvent.FetchModeChanged(item))
+                onItemSelected = { i, _ ->
+                    state.eventSink(MainListEvent.FetchModeChanged(FetchMode.entries[i]))
                 },
                 label = "Mode",
             )

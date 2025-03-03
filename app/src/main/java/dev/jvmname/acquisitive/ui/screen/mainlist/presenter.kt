@@ -102,7 +102,7 @@ class MainScreenPresenter(
                 "fetchMode" to fetchMode,
                 "isRefreshing" to isRefreshing,
                 "presenterScope" to presenterScope,
-                "lazyPaged" to lazyPaged,
+                "lazyPaged" to lazyPaged.itemSnapshotList.items.joinToString { it.id.id.toString() },
             ),
             logger = { tag, msg -> logcat(LogPriority.WARN) { "$tag: $msg" } }
         )

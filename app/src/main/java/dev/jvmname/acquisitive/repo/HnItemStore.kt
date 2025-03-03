@@ -45,7 +45,7 @@ class HnItemStore(
         val keys = ids.map { it.id.toString() }
 
         val storedList = if (refresh) {
-            storage.delete(HnItemEntity::fetchMode eq mode.value)
+            storage.delete(HnItemEntity::fetchMode eq mode.name)
             emptyList()
         } else {
             storage.selectByKeys(
@@ -78,7 +78,7 @@ class HnItemStore(
     }
 
     private fun buildWhere(mode: FetchMode, ids: ItemIdArray): Where<HnItemEntity> {
-        return HnItemEntity::fetchMode eq mode.value and
+        return HnItemEntity::fetchMode eq mode.name and
                 (HnItemEntity::id inList ids.storage.asList())
     }
 }

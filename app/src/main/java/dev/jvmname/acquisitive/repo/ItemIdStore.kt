@@ -20,7 +20,7 @@ class ItemIdStore(
 
     suspend fun getIds(fetchMode: FetchMode): ItemIdArray {
         val ids = storage.selectByKeys(
-            listOf(fetchMode.value),
+            listOf(fetchMode.name),
             expiresAfter = futureExpiry
         )
             .map { it.firstOrNull() }
@@ -36,7 +36,7 @@ class ItemIdStore(
         val updatedIds = client.getStories(fetchMode)
         val now = Clock.System.now()
         storage.upsert(
-            fetchMode.value,
+            fetchMode.name,
             updatedIds,
             expiresAt = futureExpiry
         )
