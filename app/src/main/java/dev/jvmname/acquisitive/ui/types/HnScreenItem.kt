@@ -17,7 +17,7 @@ sealed interface HnScreenItem {
         val isHot: Boolean,
         val score: Int,
         val rank: Int,
-        val urlHost: String?,
+        val urlHost: UrlAndHost?,
         val numChildren: Int,
         val time: String,
         val author: String,
@@ -38,11 +38,18 @@ sealed interface HnScreenItem {
     ) : HnScreenItem
 }
 
+@Immutable
+@Poko
+class UrlAndHost(
+    val url: String,
+    val host: String,
+)
+
 fun HnItem.toScreenItem(
     isHot: Boolean,
     time: String,
     rank: Int,
-    urlHost: String?,
+    urlHost: UrlAndHost?,
     icon: String? = null,
 ): HnScreenItem = when (this) {
     is HnItem.Comment -> HnScreenItem.CommentItem(

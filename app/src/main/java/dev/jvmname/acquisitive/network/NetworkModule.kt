@@ -30,7 +30,7 @@ interface NetworkComponent {
     }
 
     @Provides
-    fun provideMoshiConverterFactory(moshi: Moshi) = MoshiConverterFactory.create(moshi)
+    fun provideMoshiConverterFactory(moshi: Moshi): MoshiConverterFactory = MoshiConverterFactory.create(moshi)
 
     @Provides
     fun provideOkhttpClient(): OkHttpClient {

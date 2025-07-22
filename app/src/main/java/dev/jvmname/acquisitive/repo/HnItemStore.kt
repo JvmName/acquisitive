@@ -11,14 +11,15 @@ import com.mercury.sqkon.db.eq
 import com.mercury.sqkon.db.inList
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.FetchMode
+import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.fetchAsync
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import me.tatarka.inject.annotations.Inject
+import kotlin.time.Clock.System
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 @Inject
 class HnItemStore(
@@ -32,6 +33,12 @@ class HnItemStore(
             buildWhere(mode, ids),
             orderBy = listOf(OrderBy(HnItemEntity::responseIndex, OrderDirection.ASC)),
         )
+    }
+
+    suspend fun getItem(id: ItemId): HnItemEntity {
+        return requireNotNull(storage.selectByKey(id.toString()).firstOrNull()) {
+            "item $id was null for no good reason"
+        }
     }
 
     suspend fun getItemRange(
@@ -68,13 +75,14 @@ class HnItemStore(
     }
 
     fun stream(fetchMode: FetchMode, ids: ItemIdArray): Flow<List<HnItemEntity>> {
-        return storage.select(buildWhere(fetchMode, ids),
+        return storage.select(
+            buildWhere(fetchMode, ids),
             orderBy = listOf(OrderBy(HnItemEntity::responseIndex, OrderDirection.ASC)),
         )
     }
 
     suspend fun clearExpired() {
-        storage.deleteExpired(Clock.System.now())
+        storage.deleteExpired(System.now())
     }
 
     private fun buildWhere(mode: FetchMode, ids: ItemIdArray): Where<HnItemEntity> {
@@ -85,4 +93,4 @@ class HnItemStore(
 
 val CACHE_EXPIRATION = 30.minutes
 val futureExpiry: Instant
-    get() = Clock.System.now() + CACHE_EXPIRATION
+    get() = System.now() + CACHE_EXPIRATION

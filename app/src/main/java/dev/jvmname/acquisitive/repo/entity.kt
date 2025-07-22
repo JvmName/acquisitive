@@ -5,7 +5,6 @@ import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
 @[Poko Serializable]
@@ -15,7 +14,7 @@ class HnItemEntity(
     val fetchMode: FetchMode,
     val type: String,  // "story", "comment", "job", "poll", "pollopt"
     val author: String?,
-    val time: Instant,
+    val time: kotlin.time.Instant,
     val dead: Boolean?,
     val deleted: Boolean?,
     val kids: ItemIdArray?,

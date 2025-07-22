@@ -1,5 +1,6 @@
 package dev.jvmname.acquisitive.ui.screen.mainlist
 
+import android.content.Intent
 import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
@@ -15,12 +16,16 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import com.slack.circuitx.android.IntentScreen
 import com.theapache64.rebugger.Rebugger
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.score
 import dev.jvmname.acquisitive.repo.HnItemPagerFactory
 import dev.jvmname.acquisitive.repo.HnItemRepository
+import dev.jvmname.acquisitive.ui.screen.commentlist.CommentListScreen
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.*
+import dev.jvmname.acquisitive.ui.types.UrlAndHost
 import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +33,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
 import logcat.LogPriority
@@ -66,15 +70,9 @@ class MainScreenPresenter(
                     data.map { (item, rank) ->
                         item.toScreenItem(
                             isHot = item.score >= fetchMode.hotThreshold,
-                            icon = when {
-                                item.dead == true -> "☠️"
-                                item.deleted == true -> "🗑️"
-                                item is HnItem.Job -> "💼"
-                                item is HnItem.Poll -> "🗳️"
-                                else -> null
-                            },
+                            icon = item.prefixIcon(),
                             rank = rank,
-                            time = (Clock.System.now() - item.time).toDateTimePeriod()
+                            time = (kotlin.time.Clock.System.now() - item.time).toDateTimePeriod()
                                 .toAbbreviatedDuration(),
                             urlHost = when (item) {
                                 is HnItem.Job -> item.url?.let(::extractUrlHost)
@@ -112,16 +110,32 @@ class MainScreenPresenter(
             pagedStories = lazyPaged,
         ) { event ->
             when (event) {
-                MainListEvent.AddComment -> navigator
-                MainListEvent.CommentsClick -> TODO()
-                MainListEvent.FavoriteClick -> TODO()
-                MainListEvent.UpvoteClick -> TODO()
-                MainListEvent.Refresh -> isRefreshing = true
-                is MainListEvent.FetchModeChanged -> {
+                is FetchModeChanged -> {
                     fetchMode = event.fetchMode
                 }
+
+                is ItemClicked -> {
+                    navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, Uri.parse(event.url))))
+                }
+
+                is CommentsClick ->  {
+                    navigator.goTo(CommentListScreen(event.id))
+                }
+
+                AddComment -> navigator
+                FavoriteClick -> TODO()
+                UpvoteClick -> TODO()
+                Refresh -> isRefreshing = true
             }
         }
+    }
+
+    private fun HnItem.prefixIcon() = when {
+        dead == true -> "☠️"
+        deleted == true -> "🗑️"
+        this is HnItem.Job -> "💼"
+        this is HnItem.Poll -> "🗳️"
+        else -> null
     }
 
 
@@ -153,13 +167,14 @@ class MainScreenPresenter(
         }
 
         @VisibleForTesting
-        internal inline fun extractUrlHost(url: String): String = try {
-            if (url.isBlank()) ""
+        internal inline fun extractUrlHost(url: String): UrlAndHost = try {
+            val host = if (url.isBlank()) ""
             else Uri.parse(url).host
                 .orEmpty()
                 .removePrefix("www.")
+            UrlAndHost(url, host)
         } catch (e: Exception) {
-            ""
+            UrlAndHost(url, "")
         }
     }
 }

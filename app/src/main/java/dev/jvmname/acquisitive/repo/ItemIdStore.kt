@@ -7,7 +7,6 @@ import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.emptyItemIdArray
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
 import me.tatarka.inject.annotations.Inject
 
 
@@ -34,7 +33,7 @@ class ItemIdStore(
 
     suspend fun refresh(fetchMode: FetchMode): ItemIdArray {
         val updatedIds = client.getStories(fetchMode)
-        val now = Clock.System.now()
+        val now = kotlin.time.Clock.System.now()
         storage.upsert(
             fetchMode.name,
             updatedIds,
@@ -44,6 +43,6 @@ class ItemIdStore(
     }
 
     suspend fun clearExpired() {
-        storage.deleteExpired(Clock.System.now())
+        storage.deleteExpired(kotlin.time.Clock.System.now())
     }
 }

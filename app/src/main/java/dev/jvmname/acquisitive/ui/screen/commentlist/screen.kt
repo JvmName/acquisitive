@@ -1,6 +1,7 @@
 package dev.jvmname.acquisitive.ui.screen.commentlist
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
@@ -9,14 +10,9 @@ import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
-@[Inject CircuitInject(CommentListScreen::class, AppScope::class)]
-class CommentListPresenter(
-    private val repo: HnItemRepository,
-    @Assisted private val screen: CommentListScreen,
-    @Assisted private val navigator: Navigator,
-) : Presenter<CommentListScreen.CommentListState> {
-    @Composable
-    override fun present(): CommentListScreen.CommentListState {
-        TODO("Not yet implemented")
-    }
+
+
+@[Composable CircuitInject(CommentListScreen::class, AppScope::class)]
+fun CommentListContent(state: CommentListScreen.CommentListState, modifier: Modifier){
+    TODO()
 }

@@ -61,8 +61,7 @@ class RealHnClient(factory: NetworkComponent.RetrofitFactory) : HnClient() {
     }
 
     override suspend fun getChildren(item: HnItem): Pair<HnItem, List<HnItem>> {
-        return item to item.kids.orEmpty()
-            .fetchAsync { getItem(it) }
+        return item to item.kids.orEmpty().fetchAsync { getItem(it) }
     }
 
     override suspend fun getTopStories(): ItemIdArray {

@@ -25,6 +25,7 @@ kotlin {
             "kotlinx.coroutines.ExperimentalCoroutinesApi",
             "kotlin.contracts.ExperimentalContracts",
             "androidx.paging.ExperimentalPagingApi",
+            "kotlin.time.ExperimentalTime",
         )
         freeCompilerArgs.addAll(
             "-Xjsr305=strict",

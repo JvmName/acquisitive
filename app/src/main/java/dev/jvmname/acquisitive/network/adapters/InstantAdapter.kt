@@ -3,7 +3,7 @@ package dev.jvmname.acquisitive.network.adapters
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonReader
 import com.squareup.moshi.JsonWriter
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 object InstantAdapter : JsonAdapter<Instant>() {
     override fun fromJson(reader: JsonReader): Instant {

@@ -4,13 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.remember
 import com.slack.circuit.backstack.rememberSaveableBackStack
 import com.slack.circuit.foundation.CircuitCompositionLocals
 import com.slack.circuit.foundation.NavigableCircuitContent
-import com.slack.circuit.foundation.NavigatorDefaults
 import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
-import com.slack.circuitx.gesturenavigation.GestureNavigationDecoration
+import com.slack.circuitx.gesturenavigation.GestureNavigationDecorationFactory
 import com.theapache64.rebugger.RebuggerConfig
 import dev.jvmname.acquisitive.di.AcqComponent
 import dev.jvmname.acquisitive.di.create
@@ -52,10 +52,11 @@ class MainActivity : ComponentActivity() {
                     NavigableCircuitContent(
                         navigator = navigator,
                         backStack = backstack,
-                        decoration = GestureNavigationDecoration(
-                            fallback = NavigatorDefaults.DefaultDecoration,
-                            onBackInvoked = navigator::pop
-                        )
+                        decoratorFactory = remember(navigator){
+                            GestureNavigationDecorationFactory(
+                                onBackInvoked = navigator::pop,
+                            )
+                        },
                     )
                 }
             }

@@ -1,6 +1,7 @@
 package dev.jvmname.acquisitive.ui.screen.mainlist
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -68,6 +69,7 @@ import dev.jvmname.acquisitive.ui.common.LargeDropdownMenu
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
+import dev.jvmname.acquisitive.ui.types.UrlAndHost
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.parcelize.Parcelize
 import logcat.LogPriority
@@ -88,9 +90,10 @@ data class MainListScreen(val fetchMode: FetchMode = FetchMode.TOP) : Screen {
 
 sealed class MainListEvent : CircuitUiEvent {
     data class FetchModeChanged(val fetchMode: FetchMode) : MainListEvent()
+    data class ItemClicked(val url: String) : MainListEvent()
+    data class CommentsClick(val id: ItemId) : MainListEvent()
     data object FavoriteClick : MainListEvent()
     data object UpvoteClick : MainListEvent()
-    data object CommentsClick : MainListEvent()
     data object AddComment : MainListEvent()
     data object Refresh : MainListEvent()
 }
@@ -144,7 +147,12 @@ private fun FetchModeSwitcher(state: MainListScreen.MainListState) {
         title = {
             LargeDropdownMenu(
                 modifier = Modifier.fillMaxWidth(0.55f),
-                items = FetchMode.entries.fastMap { resources.getString(R.string.stories_dropdown, it)  },
+                items = FetchMode.entries.fastMap {
+                    resources.getString(
+                        R.string.stories_dropdown,
+                        it
+                    )
+                },
                 selectedIndex = FetchMode.entries.indexOf(state.fetchMode),
                 onItemSelected = { i, _ ->
                     state.eventSink(MainListEvent.FetchModeChanged(FetchMode.entries[i]))
@@ -183,6 +191,7 @@ fun MainListItem(
                 modifier = modifier
                     .heightIn(max = CELL_HEIGHT)
                     .fillMaxWidth()
+                    .clickable { item.urlHost?.let { eventSink(MainListEvent.ItemClicked(it.url)) } }
             ) {
                 val (rankScoreBox, actionBox) = createRefs()
                 val (title, urlHost, timeAuthor) = createRefs()
@@ -221,7 +230,6 @@ fun MainListItem(
                             tint = MaterialTheme.colorScheme.hotColor,
                         )
                     }
-
                 }
 
                 Text(
@@ -238,7 +246,7 @@ fun MainListItem(
 
                 if (item.urlHost != null) {
                     Text(
-                        item.urlHost, style = MaterialTheme.typography.labelSmall,
+                        item.urlHost.host, style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.constrainAs(urlHost) {
                             top.linkTo(title.bottom)
                             start.linkTo(rankScoreBox.end, margin = 8.dp)
@@ -294,7 +302,7 @@ fun MainListItem(
 
                     TextButton(
                         onClick = {
-                            eventSink(MainListEvent.CommentsClick)
+                            eventSink(MainListEvent.CommentsClick(item.id))
 
                         },
                         colors = with(
@@ -393,7 +401,7 @@ private fun storyItem(id: Int): HnScreenItem = HnScreenItem.StoryItem(
     title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
     isHot = true,
     score = 950,
-    urlHost = "github.com",
+    urlHost = UrlAndHost("https://github.com/jvmname", "github.com"),
     numChildren = 121 + id,
     time = "19h",
     author = "JvmName",

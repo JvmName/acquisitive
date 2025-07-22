@@ -3,6 +3,8 @@ package dev.jvmname.acquisitive.repo
 import androidx.compose.ui.util.fastMap
 import app.cash.paging.PagingSourceFactory
 import dev.jvmname.acquisitive.network.model.FetchMode
+import dev.jvmname.acquisitive.network.model.HnItem
+import dev.jvmname.acquisitive.network.model.ItemId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
@@ -23,13 +25,18 @@ class HnItemRepository(
         }
     }
 
-    suspend fun refresh(fetchMode: FetchMode, window: Int): List<HnItemAndRank> =
-        withContext(Dispatchers.IO) {
+    suspend fun refresh(fetchMode: FetchMode, window: Int): List<HnItemAndRank> {
+        return withContext(Dispatchers.IO) {
             val ids = idStore.refresh(fetchMode)
             val sliced = ids.slice(0..window)
             return@withContext itemStore.getItemRange(sliced, fetchMode, 0, refresh = true)
                 .fastMap(HnItemEntity::toItem)
         }
+    }
+
+    suspend fun getItem(id: ItemId): HnItem {
+        return itemStore.getItem(id).toItem().item
+    }
 
     suspend fun computeWindow(
         fetchMode: FetchMode,
