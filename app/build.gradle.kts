@@ -51,7 +51,7 @@ val aqVersionName = providers.gradleProperty("aq_versionname").get()
 
 android {
     namespace = "dev.jvmname.acquisitive"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 33
@@ -127,7 +127,6 @@ dependencies {
     }
     "coreLibraryDesugaring"(libs.desugarJdkLibs)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -169,6 +168,5 @@ dependencies {
     ksp(libs.square.moshiSealedCodegen)
     implementation(libs.square.logcat)
 
-    implementation(libs.mnf.store)
     implementation("io.github.theapache64:rebugger:1.0.0-rc03")
 }

@@ -1,16 +1,13 @@
 [versions]
 activityCompose = "1.10.1"
-agp = "8.12.0"
-circuit = "0.29.1"
-composeBom = "2025.07.00"
+agp = "8.12.1"
+circuit = "0.30.0"
+composeBom = "2025.08.01"
 constraintlayout = "1.1.1"
-coreKtx = "1.16.0"
+coreKtx = "1.17.0"
 jvmTarget = "21"
-kotlin = "2.2.0"
-kotlinInject = "0.8.0"
-kotlinInject-anvil = "0.1.6"
+kotlin = "2.2.10"
 kotlinx-coroutines = "1.10.2"
-lifecycleRuntimeKtx = "2.9.2"
 sqldelight = "2.1.0"
 moshi = "1.15.2"
 moshiX = "0.31.0"
@@ -20,16 +17,15 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 buildConfig = { id = "com.github.gmazzo.buildconfig", version = "5.6.7" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version = "2.2.0-2.0.2" }
+ksp = { id = "com.google.devtools.ksp", version = "2.2.10-2.0.2" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 poko = "dev.drewhamilton.poko:0.19.3"
-metro = "dev.zacsweers.metro:0.5.3"
+metro = "dev.zacsweers.metro:0.6.3"
 
 
 [libraries]
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayout" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
-androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 androidx-ui = { module = "androidx.compose.ui:ui" }
@@ -49,7 +45,7 @@ circuitx-overlays = { module = "com.slack.circuit:circuitx-overlays", version.re
 circuitx-gestureNav = { module = "com.slack.circuit:circuitx-gesture-navigation", version.ref = "circuit" }
 circuitx-android = { module = "com.slack.circuit:circuitx-android", version.ref = "circuit" }
 
-desugarJdkLibs = "com.android.tools:desugar_jdk_libs:2.1.4"
+desugarJdkLibs = "com.android.tools:desugar_jdk_libs:2.1.5"
 
 kotlinx-datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.7.1"
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
@@ -70,5 +66,3 @@ square-moshiAdapters = { module = "dev.zacsweers.moshix:moshi-adapters", version
 square-moshiSealed = { module = "dev.zacsweers.moshix:moshi-sealed-runtime", version.ref = "moshiX" }
 square-moshiSealedCodegen = { module = "dev.zacsweers.moshix:moshi-sealed-codegen", version.ref = "moshiX" }
 square-logcat = "com.squareup.logcat:logcat:0.4"
-
-mnf-store = { module = "org.mobilenativefoundation.store:store5", version = "5.1.0-alpha06" }
