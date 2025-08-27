@@ -10,8 +10,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.paging.cachedIn
+import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.map
-import app.cash.paging.compose.collectAsLazyPagingItems
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.Navigator
@@ -24,10 +24,20 @@ import dev.jvmname.acquisitive.network.model.score
 import dev.jvmname.acquisitive.repo.HnItemPagerFactory
 import dev.jvmname.acquisitive.repo.HnItemRepository
 import dev.jvmname.acquisitive.ui.screen.commentlist.CommentListScreen
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.*
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.AddComment
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.CommentsClick
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.FavoriteClick
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.FetchModeChanged
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.ItemClicked
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.Refresh
+import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.UpvoteClick
 import dev.jvmname.acquisitive.ui.types.UrlAndHost
 import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Assisted
+import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
@@ -37,19 +47,21 @@ import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
 import logcat.LogPriority
 import logcat.logcat
-import me.tatarka.inject.annotations.Assisted
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("NOTHING_TO_INLINE")
-@[Inject CircuitInject(MainListScreen::class, AppScope::class)]
+@Inject
 class MainScreenPresenter(
     private val pagingFactory: HnItemPagerFactory,
     private val repo: HnItemRepository,
     @Assisted private val screen: MainListScreen,
     @Assisted private val navigator: Navigator,
 ) : Presenter<MainListScreen.MainListState> {
+
+    @[AssistedFactory CircuitInject(MainListScreen::class, AppScope::class)]
+    fun interface Factory {
+        fun create(screen: MainListScreen, navigator: Navigator): MainScreenPresenter
+    }
 
     @Composable
     override fun present(): MainListScreen.MainListState {
@@ -118,7 +130,7 @@ class MainScreenPresenter(
                     navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, Uri.parse(event.url))))
                 }
 
-                is CommentsClick ->  {
+                is CommentsClick -> {
                     navigator.goTo(CommentListScreen(event.id))
                 }
 

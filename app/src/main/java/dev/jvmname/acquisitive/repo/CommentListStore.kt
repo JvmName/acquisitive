@@ -1,6 +1,7 @@
 package dev.jvmname.acquisitive.repo
 
-import me.tatarka.inject.annotations.Inject
+import dev.zacsweers.metro.Inject
+
 
 @Inject
 class CommentListStore() {

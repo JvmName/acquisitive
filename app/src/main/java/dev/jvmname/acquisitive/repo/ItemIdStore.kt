@@ -1,24 +1,21 @@
 package dev.jvmname.acquisitive.repo
 
-import com.mercury.sqkon.db.Sqkon
+import dev.jvmname.acquisitive.db.HnItemQueries
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.util.ItemIdArray
-import dev.jvmname.acquisitive.util.emptyItemIdArray
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import me.tatarka.inject.annotations.Inject
+import dev.zacsweers.metro.Inject
 
 
 @Inject
 class ItemIdStore(
-    skn: Sqkon,
     private val client: HnClient,
+    private val db: HnItemQueries,
 ) {
-    private val storage = skn.keyValueStorage<ItemIdArray>(name = ItemIdArray::class.simpleName!!)
 
     suspend fun getIds(fetchMode: FetchMode): ItemIdArray {
-        val ids = storage.selectByKeys(
+        TODO()
+      /*  val ids = storage.selectByKeys(
             listOf(fetchMode.name),
             expiresAfter = futureExpiry
         )
@@ -28,21 +25,25 @@ class ItemIdStore(
         if (ids.isEmpty()) {
             return refresh(fetchMode)
         }
-        return ids
+        return ids*/
     }
 
     suspend fun refresh(fetchMode: FetchMode): ItemIdArray {
-        val updatedIds = client.getStories(fetchMode)
+//        val updatedIds = client.getStories(fetchMode)
+
+        TODO()
+     /*   val updatedIds = client.getStories(fetchMode)
         val now = kotlin.time.Clock.System.now()
         storage.upsert(
             fetchMode.name,
             updatedIds,
             expiresAt = futureExpiry
         )
-        return updatedIds
+        return updatedIds*/
     }
 
     suspend fun clearExpired() {
-        storage.deleteExpired(kotlin.time.Clock.System.now())
+        TODO()
+//        storage.deleteExpired(kotlin.time.Clock.System.now())
     }
 }

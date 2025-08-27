@@ -47,7 +47,7 @@ sealed interface HnItem {
         override val deleted: Boolean?,
         override val kids: ItemIdArray?,
         val text: String?,
-        val parent: Int,
+        val parent: ItemId,
     ) : HnItem
 
     @[Poko Serializable TypeLabel("job") JsonClass(generateAdapter = true)]

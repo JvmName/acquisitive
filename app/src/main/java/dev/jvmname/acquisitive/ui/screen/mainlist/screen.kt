@@ -53,10 +53,10 @@ import androidx.constraintlayout.compose.Dimension
 import androidx.constraintlayout.compose.atLeast
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import app.cash.paging.PagingData
-import app.cash.paging.compose.LazyPagingItems
-import app.cash.paging.compose.collectAsLazyPagingItems
-import app.cash.paging.compose.itemKey
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
@@ -70,11 +70,11 @@ import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import dev.jvmname.acquisitive.ui.types.UrlAndHost
+import dev.zacsweers.metro.AppScope
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.parcelize.Parcelize
 import logcat.LogPriority
 import logcat.logcat
-import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 
 private val CELL_HEIGHT = 75.dp
 

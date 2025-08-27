@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.buildConfig)
     alias(libs.plugins.poko)
-    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.metro)
 }
 
 kotlin {
@@ -40,7 +40,8 @@ kotlin {
             // https://publicobject.com/2019/11/18/kotlins-assert-is-not-like-javas-assert/
             "-Xassertions=jvm",
             "-Xtype-enhancement-improvements-strict-mode",
-            "-Xexpect-actual-classes"
+            "-Xexpect-actual-classes",
+            "-Xannotation-default-target=param-property",
         )
     }
 }
@@ -103,12 +104,21 @@ android {
 }
 
 ksp {
-    arg("circuit.codegen.mode", "kotlin_inject_anvil")
-//    arg("me.tatarka.inject.dumpGraph", "true")
-    arg(
-        "kotlin-inject-anvil-contributing-annotations",
-        "com.slack.circuit.codegen.annotations.CircuitInject"
-    )
+    arg("circuit.codegen.mode", "metro")
+}
+
+sqldelight {
+    databases{
+        create("AcqDatabase"){
+            packageName = "dev.jvmname.acquisitive.repo.db"
+            schemaOutputDirectory = file("src/main/sqldelight/databases")
+            verifyMigrations = true
+        }
+    }
+}
+
+metro {
+    enabled = true
 }
 
 dependencies {
@@ -139,12 +149,6 @@ dependencies {
     implementation(libs.circuit.annotations)
     ksp(libs.circuit.codegen)
 
-    implementation(libs.kotlinInject.runtime)
-    implementation(libs.kotlinInject.anvil.runtime)
-    implementation(libs.kotlinInject.anvil.runtime.optional)
-    ksp(libs.kotlinInject.compiler)
-    ksp(libs.kotlinInject.anvil.compiler)
-
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization)
@@ -152,6 +156,7 @@ dependencies {
     implementation(libs.sqldelight.async)
     implementation(libs.sqldelight.coroutines)
     implementation(libs.sqldelight.driver.android)
+    implementation(libs.sqldelight.paging)
 
     implementation(platform(libs.square.retrofit.bom))
     implementation(libs.square.retrofit)
@@ -163,9 +168,6 @@ dependencies {
     implementation(libs.square.moshiSealed)
     ksp(libs.square.moshiSealedCodegen)
     implementation(libs.square.logcat)
-    implementation(libs.square.paging)
-
-    implementation(libs.sqkon)
 
     implementation(libs.mnf.store)
     implementation("io.github.theapache64:rebugger:1.0.0-rc03")

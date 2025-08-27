@@ -1,0 +1,87 @@
+import dev.jvmname.acquisitive.network.model.FetchMode;
+import dev.jvmname.acquisitive.network.model.ItemId;
+import dev.jvmname.acquisitive.util.ItemIdArray;
+import kotlin.Boolean;
+import kotlin.Int;
+import kotlin.time.Instant;
+
+CREATE TABLE HnItemEntity (
+   id INTEGER AS ItemId NOT NULL PRIMARY KEY,
+   fetchMode TEXT AS FetchMode NOT NULL,
+   rank INTEGER AS Int NOT NULL,
+   type TEXT NOT NULL,
+   author TEXT,
+   time INTEGER AS Instant NOT NULL,
+   dead INTEGER AS Boolean,
+   deleted INTEGER AS Boolean,
+   kids TEXT AS ItemIdArray,
+   title TEXT,
+   url TEXT,
+   text TEXT,
+   score INTEGER AS Int,
+   descendants INTEGER AS Int,
+   parent INTEGER AS ItemId,
+   poll INTEGER AS ItemId,
+   parts TEXT AS ItemIdArray
+);
+
+CREATE INDEX IF NOT EXISTS HnItemEntity_fetchMode ON HnItemEntity(fetchMode);
+CREATE INDEX IF NOT EXISTS HnItemEntity_rank ON HnItemEntity(rank);
+
+getById:
+SELECT *
+FROM HnItemEntity
+WHERE id = :id ;
+
+getByIds:
+SELECT *
+FROM HnItemEntity
+WHERE id IN :ids
+ORDER BY HnItemEntity.rank ASC ;
+
+getByFetchMode:
+SELECT * FROM HnItemEntity
+WHERE HnItemEntity.fetchMode = :fetchMode
+ORDER BY HnItemEntity.rank ASC ;
+
+getByIdAndFetchMode:
+SELECT * FROM HnItemEntity
+WHERE 1=1
+AND id IN :ids
+AND HnItemEntity.fetchMode = :fetchMode
+ORDER BY HnItemEntity.rank ASC ;
+
+upsertItems:
+INSERT OR REPLACE INTO HnItemEntity
+VALUES ?;
+
+deleteByFetchMode:
+DELETE FROM HnItemEntity
+WHERE HnItemEntity.fetchMode = :fetchMode;
+
+keyedPaging:
+SELECT * FROM HnItemEntity
+WHERE fetchMode = :fetchMode
+AND rank >= (SELECT rank FROM HnItemEntity WHERE fetchMode = :fetchMode AND id = :begin)
+AND (
+    :end IS NULL
+    OR rank < (SELECT rank FROM HnItemEntity WHERE fetchMode = :fetchMode AND id = :end)
+)
+ORDER BY rank ASC;
+
+keyedPageBoundaries:
+SELECT id
+  FROM (
+      SELECT
+          id,
+          rank,
+          CASE
+              WHEN ((row_number() OVER (ORDER BY rank ASC) - 1) % :limit) = 0 THEN 1
+              WHEN :anchor IS NOT NULL AND id = :anchor THEN 1
+              ELSE 0
+          END page_boundary
+      FROM HnItemEntity
+      WHERE fetchMode = :fetchMode
+      ORDER BY rank ASC
+  )
+  WHERE page_boundary = 1;

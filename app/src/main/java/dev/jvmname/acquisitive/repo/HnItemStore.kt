@@ -2,43 +2,55 @@ package dev.jvmname.acquisitive.repo
 
 import androidx.compose.ui.util.fastMapIndexed
 import app.cash.paging.PagingSource
-import com.mercury.sqkon.db.OrderBy
-import com.mercury.sqkon.db.OrderDirection
-import com.mercury.sqkon.db.Sqkon
-import com.mercury.sqkon.db.Where
-import com.mercury.sqkon.db.and
-import com.mercury.sqkon.db.eq
-import com.mercury.sqkon.db.inList
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOneOrNull
+import app.cash.sqldelight.paging3.QueryPagingSource
+import dev.jvmname.acquisitive.db.HnItemEntity
+import dev.jvmname.acquisitive.db.HnItemQueries
+import dev.jvmname.acquisitive.di.AppCoroutineScope
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.fetchAsync
+import dev.zacsweers.metro.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
-import me.tatarka.inject.annotations.Inject
-import kotlin.time.Clock.System
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 @Inject
 class HnItemStore(
-    skn: Sqkon,
     private val client: HnClient,
+    private val db: HnItemQueries,
+    @AppCoroutineScope private val scope: CoroutineScope,
 ) {
-    private val storage = skn.keyValueStorage<HnItemEntity>(HnItemEntity::class.simpleName!!)
 
-    fun pagingSource(ids: ItemIdArray, mode: FetchMode): PagingSource<Int, HnItemEntity> {
-        return storage.selectPagingSource(
-            buildWhere(mode, ids),
-            orderBy = listOf(OrderBy(HnItemEntity::responseIndex, OrderDirection.ASC)),
+    fun pagingSource(
+        mode: FetchMode,
+        mapper: (ItemId, FetchMode, Int, String, String?, Instant, Boolean?, Boolean?, ItemIdArray?, String?, String?, String?, Int?, Int?, ItemId?, ItemId?, ItemIdArray?) -> HnRankedItem,
+    ): PagingSource<ItemId, HnRankedItem> {
+        return QueryPagingSource(
+            transacter = db,
+            context = Dispatchers.IO,
+            pageBoundariesProvider = { anchor, limit ->
+                db.keyedPageBoundaries(fetchMode = mode, limit = limit, anchor = anchor)
+            },
+            queryProvider = { beginIncl, endIncl ->
+                db.keyedPaging(mode, beginIncl, endIncl, mapper = mapper)
+            }
         )
     }
 
-    suspend fun getItem(id: ItemId): HnItemEntity {
-        return requireNotNull(storage.selectByKey(id.toString()).firstOrNull()) {
-            "item $id was null for no good reason"
-        }
+    suspend fun getItem(id: ItemId): HnRankedItem {
+        return db.getById(id)
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.IO)
+            .firstOrNull()
+            ?.toItem()
+            ?: error("$id was null")
     }
 
     suspend fun getItemRange(
@@ -49,48 +61,39 @@ class HnItemStore(
     ): List<HnItemEntity> {
         if (ids.isEmpty()) return emptyList()
 
-        val keys = ids.map { it.id.toString() }
-
         val storedList = if (refresh) {
-            storage.delete(HnItemEntity::fetchMode eq mode.name)
+            db.deleteByFetchMode(fetchMode = mode)
             emptyList()
         } else {
-            storage.selectByKeys(
-                keys = keys,
-                orderBy = listOf(OrderBy(HnItemEntity::responseIndex)),
-//                expiresAfter = futureExpiry
-            ).firstOrNull() ?: emptyList()
+            db.getByIdAndFetchMode(ids, mode)
+                .asFlow()
+                .mapToList(Dispatchers.IO)
+                .firstOrNull()
+                ?: emptyList()
         }
 
         if (refresh || storedList.size != ids.size) {
             val updated = ids.fetchAsync { client.getItem(it) }
                 .fastMapIndexed { i, item -> item.toEntity(startIndex + i, mode) }
-            storage.upsertAll(
-                values = updated.associateBy { it.id.toString() },
-                expiresAt = futureExpiry
-            )
+            upsertItems(updated)
             return updated
         }
         return storedList
     }
 
     fun stream(fetchMode: FetchMode, ids: ItemIdArray): Flow<List<HnItemEntity>> {
-        return storage.select(
-            buildWhere(fetchMode, ids),
-            orderBy = listOf(OrderBy(HnItemEntity::responseIndex, OrderDirection.ASC)),
-        )
+        return db.getByIdAndFetchMode(ids, fetchMode)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
     }
 
-    suspend fun clearExpired() {
-        storage.deleteExpired(System.now())
-    }
-
-    private fun buildWhere(mode: FetchMode, ids: ItemIdArray): Where<HnItemEntity> {
-        return HnItemEntity::fetchMode eq mode.name and
-                (HnItemEntity::id inList ids.storage.asList())
+    private fun upsertItems(items: List<HnItemEntity>) {
+        for (chunk in items.chunked(500)) {
+            db.transaction {
+                for (item in chunk) {
+                    db.upsertItems(item)
+                }
+            }
+        }
     }
 }
-
-val CACHE_EXPIRATION = 30.minutes
-val futureExpiry: Instant
-    get() = System.now() + CACHE_EXPIRATION

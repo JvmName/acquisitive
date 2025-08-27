@@ -58,7 +58,7 @@ fun HnItem.toScreenItem(
         time = time,
         author = by.orEmpty(),
         numChildren = kids?.size ?: 0,
-        parent = ItemId(parent)
+        parent = parent
     )
 
     else -> HnScreenItem.StoryItem(

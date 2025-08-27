@@ -1,40 +1,16 @@
 package dev.jvmname.acquisitive.repo
 
-import dev.drewhamilton.poko.Poko
+import dev.jvmname.acquisitive.db.HnItemEntity
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
-import dev.jvmname.acquisitive.network.model.ItemId
-import dev.jvmname.acquisitive.util.ItemIdArray
-import kotlinx.serialization.Serializable
 
-@[Poko Serializable]
-class HnItemEntity(
-    val id: Int,
-    val responseIndex: Int,
-    val fetchMode: FetchMode,
-    val type: String,  // "story", "comment", "job", "poll", "pollopt"
-    val author: String?,
-    val time: kotlin.time.Instant,
-    val dead: Boolean?,
-    val deleted: Boolean?,
-    val kids: ItemIdArray?,
-    val title: String?,
-    val url: String?,
-    val text: String?,
-    val score: Int?,
-    val descendants: Int?,
-    val parent: Int?,
-    val poll: Int?,
-    val parts: ItemIdArray?,
-)
+data class HnRankedItem(val item: HnItem, val rank: Int)
 
-data class HnItemAndRank(val item: HnItem, val rank: Int)
-
-fun HnItemEntity.toItem(): HnItemAndRank {
-    return HnItemAndRank(
+fun HnItemEntity.toItem(): HnRankedItem {
+    return HnRankedItem(
         item = when (type) {
             "story" -> HnItem.Story(
-                id = ItemId(id),
+                id = id,
                 by = author,
                 time = time,
                 dead = dead,
@@ -48,7 +24,7 @@ fun HnItemEntity.toItem(): HnItemAndRank {
             )
 
             "comment" -> HnItem.Comment(
-                id = ItemId(id),
+                id = id,
                 by = author,
                 time = time,
                 dead = dead,
@@ -60,7 +36,7 @@ fun HnItemEntity.toItem(): HnItemAndRank {
                 )
 
             "job" -> HnItem.Job(
-                id = ItemId(id),
+                id = id,
                 by = author,
                 time = time,
                 dead = dead,
@@ -73,7 +49,7 @@ fun HnItemEntity.toItem(): HnItemAndRank {
             )
 
             "poll" -> HnItem.Poll(
-                id = ItemId(id),
+                id = id,
                 by = author,
                 time = time,
                 dead = dead,
@@ -88,20 +64,20 @@ fun HnItemEntity.toItem(): HnItemAndRank {
             )
 
             "pollopt" -> HnItem.PollOption(
-                id = ItemId(id),
+                id = id,
                 by = author,
                 time = time,
                 dead = dead,
                 deleted = deleted,
                 kids = kids,
-                poll = ItemId(poll ?: error("PollOption must have poll")),
+                poll = poll ?: error("PollOption must have poll"),
                 text = text,
                 score = score ?: 0,
             )
 
             else -> error("Unknown item type: $type")
         },
-        rank = responseIndex + 1,
+        rank = rank.toInt(),
     )
 }
 
@@ -116,8 +92,8 @@ fun HnItem.toEntity(index: Int, mode: FetchMode): HnItemEntity {
     }
 
     return HnItemEntity(
-        id = id.id,
-        responseIndex = index,
+        id = id,
+        rank = index + 1,
         fetchMode = mode,
         type = type,
         author = by,
@@ -160,7 +136,7 @@ fun HnItem.toEntity(index: Int, mode: FetchMode): HnItemEntity {
             else -> null
         },
         poll = when (this) {
-            is HnItem.PollOption -> poll.id
+            is HnItem.PollOption -> poll
             else -> null
         },
         parts = when (this) {

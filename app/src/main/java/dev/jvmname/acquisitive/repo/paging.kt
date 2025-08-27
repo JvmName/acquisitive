@@ -1,31 +1,34 @@
 package dev.jvmname.acquisitive.repo
 
 import androidx.compose.ui.util.fastMap
+import androidx.paging.InvalidatingPagingSourceFactory
 import androidx.paging.LoadType
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingState
 import app.cash.paging.PagingSource
 import app.cash.paging.RemoteMediator
+import dev.jvmname.acquisitive.db.HnItemEntity
 import dev.jvmname.acquisitive.network.model.FetchMode
-import me.tatarka.inject.annotations.Assisted
-import me.tatarka.inject.annotations.Inject
+import dev.jvmname.acquisitive.network.model.ItemId
+import dev.zacsweers.metro.Assisted
+import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.Inject
 import retrofit2.HttpException
 import java.io.IOException
 
 
 @Inject
 class HnItemPagerFactory(
-    private val mediatorFactory: (FetchMode) -> HnItemMediator,
+    private val mediatorFactory: HnItemMediator.Factory,
     private val repo: HnItemRepository,
 ) {
-    operator fun invoke(mode: FetchMode): Pager<Int, HnItemAndRank> {
-        return Pager(config = PagingConfig(pageSize = 24, enablePlaceholders = true),
+    operator fun invoke(mode: FetchMode): Pager<ItemId, HnRankedItem> {
+        return Pager(
+            config = PagingConfig(pageSize = 24, enablePlaceholders = true),
             remoteMediator = mediatorFactory(mode),
-            pagingSourceFactory = {
-                val innerFactory = repo.pagingSource(mode)
-                MappingPagingSource(innerFactory(), HnItemEntity::toItem)
-            })
+            pagingSourceFactory = InvalidatingPagingSourceFactory { repo.pagingSource(mode) }
+        )
     }
 }
 
@@ -33,7 +36,12 @@ class HnItemPagerFactory(
 class HnItemMediator(
     @Assisted private val mode: FetchMode,
     private val repo: HnItemRepository,
-) : RemoteMediator<Int, HnItemAndRank>() {
+) : RemoteMediator<ItemId, HnRankedItem>() {
+
+    @AssistedFactory
+    fun interface Factory {
+        operator fun invoke(mode: FetchMode): HnItemMediator
+    }
 
     //https://issuetracker.google.com/issues/391414839
     override suspend fun initialize(): InitializeAction {
@@ -43,7 +51,7 @@ class HnItemMediator(
 
     override suspend fun load(
         loadType: LoadType,
-        state: PagingState<Int, HnItemAndRank>,
+        state: PagingState<ItemId, HnRankedItem>,
     ): MediatorResult {
         return try {
             val endOfPage = when (loadType) {
@@ -57,7 +65,7 @@ class HnItemMediator(
                         start = startIndex,
                         loadSize = state.config.pageSize
                     ) ?: return MediatorResult.Success(endOfPaginationReached = true)
-                    list.isEmpty() || startIndex == list.last().responseIndex
+                    list.isEmpty() || startIndex == list.last().rank
                 }
 
                 LoadType.REFRESH -> repo.refresh(
@@ -77,8 +85,8 @@ class HnItemMediator(
 
 class MappingPagingSource(
     private val delegate: PagingSource<Int, HnItemEntity>,
-    private val mapper: (HnItemEntity) -> HnItemAndRank,
-) : PagingSource<Int, HnItemAndRank>() {
+    private val mapper: (HnItemEntity) -> HnRankedItem,
+) : PagingSource<Int, HnRankedItem>() {
 
     init {
         //insane bidirectional mapping of invalidations because you can't "map" a PagingSource
@@ -88,12 +96,12 @@ class MappingPagingSource(
 
     override val jumpingSupported = delegate.jumpingSupported
 
-    override fun getRefreshKey(state: PagingState<Int, HnItemAndRank>): Int? {
+    override fun getRefreshKey(state: PagingState<Int, HnRankedItem>): Int? {
         return state.anchorPosition
             ?.let { maxOf(0, it - (state.config.initialLoadSize / 2)) }
     }
 
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, HnItemAndRank> {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, HnRankedItem> {
         return when (val load = delegate.load(params)) {
             is LoadResult.Error -> LoadResult.Error(load.throwable)
             is LoadResult.Invalid -> LoadResult.Invalid()

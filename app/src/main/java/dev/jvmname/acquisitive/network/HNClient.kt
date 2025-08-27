@@ -8,15 +8,15 @@ import dev.jvmname.acquisitive.network.model.UserId
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.emptyItemIdArray
 import dev.jvmname.acquisitive.util.fetchAsync
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import logcat.asLog
 import logcat.logcat
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.AppScope
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 
 abstract class HnClient {
     //TODO figure out if i want to take the boxing hit to have an ApiResult type

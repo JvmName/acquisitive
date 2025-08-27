@@ -12,10 +12,10 @@ import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
 import com.slack.circuitx.gesturenavigation.GestureNavigationDecorationFactory
 import com.theapache64.rebugger.RebuggerConfig
-import dev.jvmname.acquisitive.di.AcqComponent
-import dev.jvmname.acquisitive.di.create
+import dev.jvmname.acquisitive.di.AcqGraph
 import dev.jvmname.acquisitive.ui.screen.mainlist.MainListScreen
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
+import dev.zacsweers.metro.createGraphFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,14 +34,12 @@ class MainActivity : ComponentActivity() {
         System.setProperty("kotlinx.coroutines.debug", if (BuildConfig.DEBUG) "on" else "off")
         enableEdgeToEdge()
         val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-        val component = AcqComponent::class.create(
-            contextDelegate = applicationContext,
-            coroutineScopeDelegate = scope,
-        )
+        val graph = createGraphFactory<AcqGraph.Factory>()
+            .create(context = applicationContext, coroutineScope = scope)
 
         logcat { "***entering compose" }
         setContent {
-            CircuitCompositionLocals(component.circuit) {
+            CircuitCompositionLocals(graph.circuit) {
                 AcquisitiveTheme {
                     logcat { "***entered theme" }
                     val backstack = rememberSaveableBackStack(root = MainListScreen())
