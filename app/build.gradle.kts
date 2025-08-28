@@ -113,6 +113,7 @@ sqldelight {
             packageName = "dev.jvmname.acquisitive.repo.db"
             schemaOutputDirectory = file("src/main/sqldelight/databases")
             verifyMigrations = true
+            deriveSchemaFromMigrations = true
         }
     }
 }
@@ -150,7 +151,6 @@ dependencies {
 
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.coroutines)
-    implementation(libs.kotlinx.serialization)
 
     implementation(libs.sqldelight.async)
     implementation(libs.sqldelight.coroutines)

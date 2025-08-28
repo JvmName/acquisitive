@@ -28,12 +28,7 @@ val ItemIdArrayColumnAdapter = object : ColumnAdapter<ItemIdArray, String> {
     }
 
     override fun encode(value: ItemIdArray): String {
-        return buildString {
-            value.forEach {
-                append(it.id)
-                append(',')
-            }
-        }
+        return value.joinToString(separator = ",") { it.id.toString()}
     }
 }
 

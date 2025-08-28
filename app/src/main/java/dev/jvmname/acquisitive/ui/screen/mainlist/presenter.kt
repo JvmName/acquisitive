@@ -1,7 +1,6 @@
 package dev.jvmname.acquisitive.ui.screen.mainlist
 
 import android.content.Intent
-import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -9,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
 import androidx.paging.cachedIn
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.map
@@ -39,7 +39,6 @@ import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -101,7 +100,7 @@ class MainScreenPresenter(
             LaunchedEffect(fetchMode) {
                 presenterScope.launch(Dispatchers.IO) {
                     lazyPaged.refresh()
-                    withTimeoutOrNull(3.seconds) { repo.stream(fetchMode).first() }
+                    withTimeoutOrNull(3.seconds) { repo.refresh(fetchMode, DEFAULT_WINDOW) }
                     isRefreshing = false
                 }
             }
@@ -127,7 +126,7 @@ class MainScreenPresenter(
                 }
 
                 is ItemClicked -> {
-                    navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, Uri.parse(event.url))))
+                    navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, event.url.toUri())))
                 }
 
                 is CommentsClick -> {
@@ -181,7 +180,8 @@ class MainScreenPresenter(
         @VisibleForTesting
         internal inline fun extractUrlHost(url: String): UrlAndHost = try {
             val host = if (url.isBlank()) ""
-            else Uri.parse(url).host
+            else url.toUri()
+                .host
                 .orEmpty()
                 .removePrefix("www.")
             UrlAndHost(url, host)

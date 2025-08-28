@@ -7,14 +7,13 @@ import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.zacsweers.moshix.sealed.annotations.TypeLabel
 import kotlinx.parcelize.Parcelize
-import kotlinx.serialization.Serializable
 
-@[JvmInline Parcelize Immutable Serializable JsonClass(generateAdapter = false)]
+@[JvmInline Parcelize Immutable JsonClass(generateAdapter = false)]
 value class ItemId(val id: Int) : Parcelable {
     override fun toString(): String = id.toString()
 }
 
-@[Immutable Serializable JsonClass(generateAdapter = true, generator = "sealed:type")]
+@[Immutable JsonClass(generateAdapter = true, generator = "sealed:type")]
 sealed interface HnItem {
     val id: ItemId
     val by: String?
@@ -23,7 +22,7 @@ sealed interface HnItem {
     val deleted: Boolean?
     val kids: ItemIdArray?
 
-    @[Poko Serializable TypeLabel("story") JsonClass(generateAdapter = true)]
+    @[Poko TypeLabel("story") JsonClass(generateAdapter = true)]
     class Story(
         override val id: ItemId,
         override val by: String?,
@@ -38,7 +37,7 @@ sealed interface HnItem {
         val text: String?,
     ) : HnItem
 
-    @[Poko Serializable TypeLabel("comment") JsonClass(generateAdapter = true)]
+    @[Poko TypeLabel("comment") JsonClass(generateAdapter = true)]
     class Comment(
         override val id: ItemId,
         override val by: String?,
@@ -50,7 +49,7 @@ sealed interface HnItem {
         val parent: ItemId,
     ) : HnItem
 
-    @[Poko Serializable TypeLabel("job") JsonClass(generateAdapter = true)]
+    @[Poko TypeLabel("job") JsonClass(generateAdapter = true)]
     class Job(
         override val id: ItemId,
         override val by: String?,
@@ -64,7 +63,7 @@ sealed interface HnItem {
         val score: Int,
     ) : HnItem
 
-    @[Poko Serializable TypeLabel("poll") JsonClass(generateAdapter = true)]
+    @[Poko TypeLabel("poll") JsonClass(generateAdapter = true)]
     class Poll(
         override val id: ItemId,
         override val by: String?,

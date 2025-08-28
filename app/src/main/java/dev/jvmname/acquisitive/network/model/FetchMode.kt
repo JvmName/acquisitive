@@ -1,26 +1,26 @@
 package dev.jvmname.acquisitive.network.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
-@Serializable
+@JsonClass(generateAdapter = false)
 enum class FetchMode {
-    @SerialName("TOP")
+    @Json(name = "TOP")
     TOP,
 
-    @SerialName("NEW")
+    @Json(name = "NEW")
     NEW,
 
-    @SerialName("ASK")
+    @Json(name = "ASK")
     ASK,
 
-    @SerialName("SHOW")
+    @Json(name = "SHOW")
     SHOW,
 
-    @SerialName("JOBS")
+    @Json(name = "JOBS")
     JOBS,
 
-    @SerialName("BEST")
+    @Json(name = "BEST")
     BEST,
 
 }

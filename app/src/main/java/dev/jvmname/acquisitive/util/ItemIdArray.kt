@@ -4,10 +4,9 @@ package dev.jvmname.acquisitive.util
 
 import com.squareup.moshi.JsonClass
 import dev.jvmname.acquisitive.network.model.ItemId
-import kotlinx.serialization.Serializable
 import kotlin.contracts.contract
 
-@[JvmInline Serializable(with = ItemIdArraySerializer::class) JsonClass(generateAdapter = false)]
+@[JvmInline JsonClass(generateAdapter = false)]
 value class ItemIdArray
 @PublishedApi internal constructor(@PublishedApi internal val storage: IntArray) :
     Collection<ItemId> {
@@ -39,12 +38,15 @@ value class ItemIdArray
 
     fun take(n: Int): ItemIdArray {
         require(n >= 0) { "Requested element count $n is less than zero." }
-        if (n == 0) return emptyItemIdArray()
-        if (n == 1) return itemIdArrayOf(first().id)
-
-        val _storage = storage
-        return ItemIdArray(n) { i ->
-            ItemId(_storage[i])
+        return when (n) {
+            0 -> emptyItemIdArray()
+            1 -> itemIdArrayOf(first().id)
+            else -> {
+                val _storage = storage
+                ItemIdArray(minOf(n, size)) { i ->
+                    ItemId(_storage[i])
+                }
+            }
         }
     }
 

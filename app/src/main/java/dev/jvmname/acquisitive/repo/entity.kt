@@ -77,7 +77,7 @@ fun HnItemEntity.toItem(): HnRankedItem {
 
             else -> error("Unknown item type: $type")
         },
-        rank = rank.toInt(),
+        rank = rank,
     )
 }
 
