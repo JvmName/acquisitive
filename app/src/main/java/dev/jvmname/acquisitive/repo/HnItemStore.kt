@@ -1,99 +1,141 @@
 package dev.jvmname.acquisitive.repo
 
-import androidx.compose.ui.util.fastMapIndexed
-import app.cash.paging.PagingSource
-import app.cash.sqldelight.coroutines.asFlow
-import app.cash.sqldelight.coroutines.mapToList
-import app.cash.sqldelight.coroutines.mapToOneOrNull
+import androidx.compose.ui.util.fastForEach
+import androidx.paging.InvalidatingPagingSourceFactory
+import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.paging3.QueryPagingSource
+import dev.jvmname.acquisitive.db.GetIdRange
+import dev.jvmname.acquisitive.db.HnIdEntity
 import dev.jvmname.acquisitive.db.HnItemEntity
 import dev.jvmname.acquisitive.db.HnItemQueries
-import dev.jvmname.acquisitive.di.AppCoroutineScope
-import dev.jvmname.acquisitive.network.HnClient
+import dev.jvmname.acquisitive.db.IdItemQueries
 import dev.jvmname.acquisitive.network.model.FetchMode
+import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
-import dev.jvmname.acquisitive.util.fetchAsync
 import dev.zacsweers.metro.Inject
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.firstOrNull
+import logcat.logcat
 import kotlin.time.Instant
+
 
 @Inject
 class HnItemStore(
-    private val client: HnClient,
-    private val db: HnItemQueries,
-    @AppCoroutineScope private val scope: CoroutineScope,
+    private val db: IdItemQueries,
+    private val itemDb: HnItemQueries,
 ) {
-
     fun pagingSource(
         mode: FetchMode,
-        mapper: (ItemId, FetchMode, Int, String, String?, Instant, Boolean?, Boolean?, ItemIdArray?, String?, String?, String?, Int?, Int?, ItemId?, ItemId?, ItemIdArray?) -> HnRankedItem,
-    ): PagingSource<ItemId, HnRankedItem> {
-        return QueryPagingSource(
-            transacter = db,
-            context = Dispatchers.IO,
-            pageBoundariesProvider = { anchor, limit ->
-                db.keyedPageBoundaries(fetchMode = mode, limit = limit, anchor = anchor)
-            },
-            queryProvider = { beginIncl, endIncl ->
-                db.keyedPaging(mode, beginIncl, endIncl, mapper = mapper)
-            }
-        )
-    }
-
-    suspend fun getItem(id: ItemId): HnRankedItem {
-        return db.getById(id)
-            .asFlow()
-            .mapToOneOrNull(Dispatchers.IO)
-            .firstOrNull()
-            ?.toItem()
-            ?: error("$id was null")
-    }
-
-    suspend fun getItemRange(
-        ids: ItemIdArray,
-        mode: FetchMode,
-        startIndex: Int,
-        refresh: Boolean = false,
-    ): List<HnItemEntity> {
-        if (ids.isEmpty()) return emptyList()
-
-        val storedList = if (refresh) {
-            db.deleteByFetchMode(fetchMode = mode)
-            emptyList()
-        } else {
-            db.getByIdAndFetchMode(ids, mode)
-                .asFlow()
-                .mapToList(Dispatchers.IO)
-                .firstOrNull()
-                ?: emptyList()
-        }
-
-        if (refresh || storedList.size != ids.size) {
-            val updated = ids.fetchAsync { client.getItem(it) }
-                .fastMapIndexed { i, item -> item.toEntity(startIndex + i, mode) }
-            upsertItems(updated)
-            return updated
-        }
-        return storedList
-    }
-
-    fun stream(fetchMode: FetchMode, ids: ItemIdArray): Flow<List<HnItemEntity>> {
-        return db.getByIdAndFetchMode(ids, fetchMode)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-    }
-
-    private fun upsertItems(items: List<HnItemEntity>) {
-        for (chunk in items.chunked(500)) {
-            db.transaction {
-                for (item in chunk) {
-                    db.upsertItems(item)
+        mapper: HnItemEntityMapper,
+    ): InvalidatingPagingSourceFactory<ItemId, HnRankedItem> {
+        return InvalidatingPagingSourceFactory {
+            QueryPagingSource(
+                transacter = itemDb,
+                context = Dispatchers.IO,
+                queryProvider = { beginIncl, endIncl ->
+                    itemDb.keyedPaging(mode, beginIncl, endIncl, mapper = mapper)
+                        .also { it.addListener { logcat { "!!Query results changed - keyedPaging" } } }
+                },
+                pageBoundariesProvider = { anchor, limit ->
+                    itemDb.keyedPageBoundaries(fetchMode = mode, limit = limit, anchor = anchor)
+                        .also { it.addListener { logcat { "!!Query results changed - keyedPageBoundaries" } } }
                 }
+            )
+        }
+    }
+
+    suspend fun getIdRange(mode: FetchMode, start: ItemId?, window: Int): List<GetIdRange> {
+        if (start == null) return emptyList()
+        return db.getIdRange(fetchMode = mode, startId = start, window = window).awaitAsList()
+    }
+
+    fun refresh(mode: FetchMode, ids: ItemIdArray, items: List<HnItem>) = db.transaction {
+        db.deleteIdByFetchMode(mode)
+
+        val lastItemIdx = items.lastIndex
+        ids.forEachIndexed { i, id ->
+            db.insertId(HnIdEntity(id, mode, i))
+            //use the same idx for [items], acknowledging that it will have fewer elements than [ids]
+            if (i <= lastItemIdx) {
+                db.insertItem(items[i].toEntity(i, mode))
             }
+        }
+    }
+
+    fun updateRange(mode: FetchMode, items: List<HnItemEntity>): List<HnItemEntity> {
+        if (items.isEmpty()) return emptyList()
+
+        val ids = ItemIdArray(items.size) { items[it].id }
+        val updated = db.transactionWithResult {
+            db.deleteAllByIds(mode, ids)
+            var count = 0L
+            items.fastForEach {
+                count += db.insertIdItem(
+                    id = it.id,
+                    fetchMode = it.fetchMode,
+                    rank = it.rank,
+                    type = it.type,
+                    author = it.author,
+                    time = it.time,
+                    dead = it.dead,
+                    deleted = it.deleted,
+                    kids = it.kids,
+                    title = it.title,
+                    url = it.url,
+                    text = it.text,
+                    score = it.score,
+                    descendants = it.descendants,
+                    parent = it.parent,
+                    poll = it.poll,
+                    parts = it.parts
+                ).value
+            }
+            count
+        }
+        return when (updated) {
+            items.size.toLong() -> items
+            else -> emptyList()
         }
     }
 }
+
+private fun toRankedItem(
+    id: ItemId,
+    fetchMode: FetchMode,
+    rank: Int,
+    type: String,
+    author: String?,
+    time: Instant,
+    dead: Boolean?,
+    deleted: Boolean?,
+    kids: ItemIdArray?,
+    title: String?,
+    url: String?,
+    text: String?,
+    score: Int?,
+    descendants: Int?,
+    parent: ItemId?,
+    poll: ItemId?,
+    parts: ItemIdArray?,
+    id_: ItemId,
+): HnRankedItem = TODO()
+
+internal typealias HnItemEntityMapper = (
+    id: ItemId,
+    fetchMode: FetchMode,
+    rank: Int,
+    type: String,
+    author: String?,
+    time: Instant,
+    dead: Boolean?,
+    deleted: Boolean?,
+    kids: ItemIdArray?,
+    title: String?,
+    url: String?,
+    text: String?,
+    score: Int?,
+    descendants: Int?,
+    parent: ItemId?,
+    poll: ItemId?,
+    parts: ItemIdArray?,
+) -> HnRankedItem

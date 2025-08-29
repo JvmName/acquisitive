@@ -1,0 +1,45 @@
+getIdRange:
+SELECT hid.id, hid.rank
+FROM HnIdEntity hid
+WHERE
+    hid.fetchMode = :fetchMode
+    AND hid.rank
+        BETWEEN
+            (SELECT rank FROM HnIdEntity WHERE HnIdEntity.id = :startId)
+            AND
+            (SELECT rank + :window FROM HnIdEntity WHERE HnIdEntity.id = :startId)
+ORDER BY hid.rank ASC;
+
+
+insertId:
+INSERT OR REPLACE INTO HnIdEntity VALUES ?;
+
+insertItem:
+INSERT OR REPLACE INTO HnItemEntity VALUES ?;
+
+insertIdItem {
+INSERT OR REPLACE INTO HnIdEntity(id, fetchMode, rank)
+VALUES (:id, :fetchMode, :rank);
+
+INSERT OR REPLACE INTO HnItemEntity(
+  id, fetchMode, rank, type, author, time,
+  dead, deleted, kids, title, url, text,
+  score, descendants, parent, poll,
+  parts
+)
+VALUES
+  (
+    : id, : fetchMode, : rank, : type, : author,
+    : time, : dead, : deleted, : kids, : title,
+    : url, : text, : score, : descendants,
+    : parent, : poll, : parts
+  );
+}
+
+deleteAllByIds{
+    DELETE FROM HnIdEntity WHERE HnIdEntity.fetchMode = :fetchMode AND HnIdEntity.id IN :idList;
+    DELETE FROM HnItemEntity WHERE HnItemEntity.fetchMode = :fetchMode AND HnItemEntity.id IN :idList ;
+}
+
+deleteIdByFetchMode:
+DELETE FROM HnIdEntity WHERE fetchMode = :fetchMode;

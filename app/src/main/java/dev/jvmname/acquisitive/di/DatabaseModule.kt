@@ -38,7 +38,6 @@ interface DatabaseModule {
                     super.onConfigure(db)
                     db.setForeignKeyConstraintsEnabled(true)
                 }
-
             }
         )
         return if (BuildConfig.DEBUG) {

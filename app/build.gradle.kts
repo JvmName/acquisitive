@@ -113,7 +113,6 @@ sqldelight {
             packageName = "dev.jvmname.acquisitive.repo.db"
             schemaOutputDirectory = file("src/main/sqldelight/databases")
             verifyMigrations = true
-            deriveSchemaFromMigrations = true
         }
     }
 }

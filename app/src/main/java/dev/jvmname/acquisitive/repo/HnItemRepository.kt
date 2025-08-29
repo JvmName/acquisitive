@@ -1,86 +1,72 @@
 package dev.jvmname.acquisitive.repo
 
-import androidx.compose.ui.util.fastMap
-import androidx.paging.PagingSource
+import androidx.compose.ui.util.fastZip
+import androidx.paging.InvalidatingPagingSourceFactory
 import dev.jvmname.acquisitive.db.HnItemEntity
+import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
+import dev.jvmname.acquisitive.util.fetchAsync
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import kotlin.time.Instant
 
 @Inject
 class HnItemRepository(
-    private val idStore: ItemIdStore,
-    private val itemStore: HnItemStore,
+    private val client: HnClient,
+    private val store: HnItemStore,
 ) {
 
-    fun pagingSource(mode: FetchMode): PagingSource<ItemId, HnRankedItem> {
-        return itemStore.pagingSource(mode, ::mapper)
+    fun pagingSource(mode: FetchMode): InvalidatingPagingSourceFactory<ItemId, HnRankedItem> {
+        return store.pagingSource(mode, ::ExpandedEntityToRankedItem)
     }
 
-    suspend fun refresh(fetchMode: FetchMode, window: Int): List<HnRankedItem> {
+    suspend fun refresh(fetchMode: FetchMode, pageSize: Int): Boolean {
         return withContext(Dispatchers.IO) {
-            val ids = idStore.refresh(fetchMode)
-            val sliced = ids.slice(0..window)
-            return@withContext itemStore.getItemRange(sliced, fetchMode, 0, refresh = true)
-                .fastMap(HnItemEntity::toItem)
+            val ids = client.getStories(fetchMode)
+            val items = ids.take(pageSize).fetchAsync { client.getItem(it) }
+            store.refresh(fetchMode, ids, items)
+            true
         }
     }
 
-    suspend fun getItem(id: ItemId): HnRankedItem {
-        return itemStore.getItem(id)
-    }
-
-    suspend fun computeWindow(
+    suspend fun appendWindow(
         fetchMode: FetchMode,
-        start: Int,
+        startId: ItemId?,
         loadSize: Int,
     ): List<HnItemEntity>? = withContext(Dispatchers.IO) {
-        val ids = idStore.getIds(fetchMode)
-        val indices = ids.indices
-
-        if (start !in indices) return@withContext null // nothing to load
-        val end = (start + loadSize).coerceIn(range = indices)
-        val sliced = ids.slice(start..end)
-        return@withContext itemStore.getItemRange(sliced, fetchMode, start)
+        if (startId == null) return@withContext emptyList()
+        val ids = store.getIdRange(fetchMode, startId, loadSize)
+        val items = ids.fetchAsync { client.getItem(it.id) }
+        val zipped = ids.fastZip(items) { id, item -> item.toEntity(id.rank, fetchMode) }
+        store.updateRange(fetchMode, zipped)
     }
+}
 
-    fun stream(fetchMode: FetchMode): Flow<List<HnItemEntity>> {
-        return flow {
-            val ids = idStore.getIds(fetchMode)
-            emitAll(itemStore.stream(fetchMode, ids))
-        }
-    }
-
-    private fun mapper(
-        id: ItemId,
-        fetchMode_: FetchMode,
-        rank: Int,
-        type: String,
-        author: String?,
-        time: Instant,
-        dead: Boolean?,
-        deleted: Boolean?,
-        kids: ItemIdArray?,
-        title: String?,
-        url: String?,
-        text: String?,
-        score: Int?,
-        descendants: Int?,
-        parent: ItemId?,
-        poll: ItemId?,
-        parts: ItemIdArray?,
-    ): HnRankedItem {
-        return HnItemEntity(
-            id, fetchMode_, rank, type, author, time,
-            dead, deleted, kids, title, url, text,
-            score, descendants, parent, poll, parts
-        ).toItem()
-    }
+private fun ExpandedEntityToRankedItem(
+    id: ItemId,
+    fetchMode: FetchMode,
+    rank: Int,
+    type: String,
+    author: String?,
+    time: Instant,
+    dead: Boolean?,
+    deleted: Boolean?,
+    kids: ItemIdArray?,
+    title: String?,
+    url: String?,
+    text: String?,
+    score: Int?,
+    descendants: Int?,
+    parent: ItemId?,
+    poll: ItemId?,
+    parts: ItemIdArray?,
+): HnRankedItem {
+    return HnItemEntity(
+        id, fetchMode, rank, type, author, time,
+        dead, deleted, kids, title, url, text,
+        score, descendants, parent, poll, parts
+    ).toItem()
 }

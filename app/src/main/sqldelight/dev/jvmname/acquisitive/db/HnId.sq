@@ -1,0 +1,12 @@
+import dev.jvmname.acquisitive.network.model.FetchMode;
+import dev.jvmname.acquisitive.network.model.ItemId;
+import kotlin.Int;
+
+CREATE TABLE IF NOT EXISTS HnIdEntity (
+    id INTEGER AS ItemId NOT NULL PRIMARY KEY,
+    fetchMode TEXT AS FetchMode NOT NULL,
+    rank INTEGER AS Int NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS HnIdEntity_fetchMode ON HnIdEntity(fetchMode);
+CREATE INDEX IF NOT EXISTS HnIdEntity_rank ON HnIdEntity(rank);

@@ -8,11 +8,13 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flatMapMerge
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.toList
 import logcat.asLog
 import logcat.logcat
 import java.io.IOException
@@ -30,12 +32,11 @@ fun String.capitalize(): String = replaceFirstChar {
 suspend fun <T, R> Collection<T>.fetchAsync(
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
     transform: suspend (T) -> R,
-): List<R> = coroutineScope {
-    map {
-        async(dispatcher + CoroutineName("fetchAsync")) {
-            transform(it)
-        }
-    }.awaitAll()
+): List<R> {
+    return asFlow()
+        .flowOn(dispatcher + CoroutineName("fetchAsync"))
+        .flatMapMerge(concurrency = 32) { flow { emit(transform(it)) } }
+        .toList(ArrayList(size))
 }
 
 // https://stackoverflow.com/a/46890009
