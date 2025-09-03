@@ -105,6 +105,4 @@ class RealHnClient(factory: NetworkComponent.RetrofitFactory) : HnClient() {
     override suspend fun getUser(id: UserId): User? {
         return wrap { storyClient.getUser(id) }
     }
-
-
 }

@@ -10,6 +10,7 @@ import dev.jvmname.acquisitive.network.model.ItemId
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.Inject
+import logcat.asLog
 import logcat.logcat
 import retrofit2.HttpException
 import java.io.IOException
@@ -23,7 +24,11 @@ class HnItemPagerFactory(
     operator fun invoke(mode: FetchMode): Pager<ItemId, HnRankedItem> {
         val psf = repo.pagingSource(mode)
         return Pager(
-            config = PagingConfig(pageSize = 24, enablePlaceholders = true),
+            config = PagingConfig(
+                pageSize = 24,
+                initialLoadSize = 24,
+                enablePlaceholders = true
+            ),
             remoteMediator = mediatorFactory(mode, psf::invalidate),
             pagingSourceFactory = psf
         )
@@ -53,34 +58,34 @@ class HnItemMediator(
         state: PagingState<ItemId, HnRankedItem>,
     ): MediatorResult {
         logcat { "load: $loadType" }
+        val pageSize = state.config.pageSize
         return try {
             val endOfPage = when (loadType) {
                 LoadType.PREPEND -> return eop()
                 LoadType.APPEND -> {
                     //anything more to load?
                     val startId = state.lastItemOrNull()?.item?.id
-                    val list = repo.appendWindow(
+                    repo.appendWindow(
                         fetchMode = mode,
                         startId = startId,
-                        loadSize = state.config.pageSize
-                    )
-                    onInvalidate()
-                    if (list == null) return eop()
-                    else list.isEmpty() || startId == list.last().id
+                        loadSize = pageSize
+                    ).also {
+                        if (it) onInvalidate()
+                    }
                 }
 
-                LoadType.REFRESH -> {
-                    repo.refresh(fetchMode = mode, state.config.pageSize)
-                        .also { onInvalidate() }
-                }
+                LoadType.REFRESH -> repo.refresh(fetchMode = mode, pageSize)
+                    .also { onInvalidate() }
             }
 
             return MediatorResult.Success(endOfPaginationReached = endOfPage).also {
                 logcat { "MediatorResult: $it" }
             }
         } catch (e: IOException) {
+            logcat { e.asLog() }
             MediatorResult.Error(e)
         } catch (e: HttpException) {
+            logcat { e.asLog() }
             MediatorResult.Error(e)
         }
     }

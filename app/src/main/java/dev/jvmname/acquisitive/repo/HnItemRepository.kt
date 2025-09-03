@@ -28,20 +28,21 @@ class HnItemRepository(
             val ids = client.getStories(fetchMode)
             val items = ids.take(pageSize).fetchAsync { client.getItem(it) }
             store.refresh(fetchMode, ids, items)
-            true
+            false
         }
     }
 
+    /** @return true if there are more items to fetch, false otherwise */
     suspend fun appendWindow(
         fetchMode: FetchMode,
         startId: ItemId?,
         loadSize: Int,
-    ): List<HnItemEntity>? = withContext(Dispatchers.IO) {
-        if (startId == null) return@withContext emptyList()
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (startId == null) return@withContext true
         val ids = store.getIdRange(fetchMode, startId, loadSize)
         val items = ids.fetchAsync { client.getItem(it.id) }
         val zipped = ids.fastZip(items) { id, item -> item.toEntity(id.rank, fetchMode) }
-        store.updateRange(fetchMode, zipped)
+        store.updateRange(fetchMode, zipped) > 0
     }
 }
 

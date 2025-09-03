@@ -1,3 +1,5 @@
+import kotlin.Int;
+
 getIdRange:
 SELECT hid.id, hid.rank
 FROM HnIdEntity hid
@@ -7,7 +9,7 @@ WHERE
         BETWEEN
             (SELECT rank FROM HnIdEntity WHERE HnIdEntity.id = :startId)
             AND
-            (SELECT rank + :window FROM HnIdEntity WHERE HnIdEntity.id = :startId)
+            (SELECT (rank + :window)-1 FROM HnIdEntity WHERE HnIdEntity.id = :startId)
 ORDER BY hid.rank ASC;
 
 
@@ -35,6 +37,15 @@ VALUES
     : parent, : poll, : parts
   );
 }
+
+getRankDistanceForId:
+SELECT
+    hid.rank,
+    COALESCE((SELECT MAX(hid.rank)), 0) AS idMax,
+    COALESCE((SELECT MAX(hi.rank )), 0) AS itemMax
+FROM HnIdEntity hid
+JOIN HnItemEntity hi ON hid.id = hi.id
+WHERE hid.id = :id ;
 
 deleteAllByIds{
     DELETE FROM HnIdEntity WHERE HnIdEntity.fetchMode = :fetchMode AND HnIdEntity.id IN :idList;

@@ -62,15 +62,15 @@ class HnItemStore(
         }
     }
 
-    fun updateRange(mode: FetchMode, items: List<HnItemEntity>): List<HnItemEntity> {
-        if (items.isEmpty()) return emptyList()
+    /** @return the distance between the last of [items] and the last id/item in the db */
+    fun updateRange(mode: FetchMode, items: List<HnItemEntity>): Int {
+        if (items.isEmpty()) return 0
 
         val ids = ItemIdArray(items.size) { items[it].id }
-        val updated = db.transactionWithResult {
+        return db.transactionWithResult {
             db.deleteAllByIds(mode, ids)
-            var count = 0L
             items.fastForEach {
-                count += db.insertIdItem(
+                db.insertIdItem(
                     id = it.id,
                     fetchMode = it.fetchMode,
                     rank = it.rank,
@@ -88,13 +88,16 @@ class HnItemStore(
                     parent = it.parent,
                     poll = it.poll,
                     parts = it.parts
-                ).value
+                )
             }
-            count
-        }
-        return when (updated) {
-            items.size.toLong() -> items
-            else -> emptyList()
+            db.getRankDistanceForId(items.last().id) { rank, idMaxRank, itemMaxRank ->
+                when (val rankL = rank.toLong()) {
+                    itemMaxRank -> idMaxRank - itemMaxRank
+                    else -> itemMaxRank - rankL
+                }
+            }
+                .executeAsOne()
+                .toInt()
         }
     }
 }
