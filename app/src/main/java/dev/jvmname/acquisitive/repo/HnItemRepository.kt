@@ -5,6 +5,7 @@ import androidx.paging.InvalidatingPagingSourceFactory
 import dev.jvmname.acquisitive.db.HnItemEntity
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.FetchMode
+import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.jvmname.acquisitive.util.fetchAsync
@@ -43,6 +44,10 @@ class HnItemRepository(
         val items = ids.fetchAsync { client.getItem(it.id) }
         val zipped = ids.fastZip(items) { id, item -> item.toEntity(id.rank, fetchMode) }
         store.updateRange(fetchMode, zipped) > 0
+    }
+
+    suspend fun getItem(mode: FetchMode, id: ItemId): HnItem {
+        return store.getItem(mode, id).toItem().item
     }
 }
 

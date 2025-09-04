@@ -26,6 +26,8 @@ kotlin {
             "kotlin.contracts.ExperimentalContracts",
             "androidx.paging.ExperimentalPagingApi",
             "kotlin.time.ExperimentalTime",
+            "coil3.annotation.ExperimentalCoilApi",
+            "com.backbase.deferredresources.compose.ExperimentalComposeAdapter",
         )
         freeCompilerArgs.addAll(
             "-Xjsr305=strict",
@@ -166,6 +168,11 @@ dependencies {
     implementation(libs.square.moshiSealed)
     ksp(libs.square.moshiSealedCodegen)
     implementation(libs.square.logcat)
+
+    implementation(libs.coil)
+    implementation(libs.coil.okhttp)
+    implementation(libs.deferredResource)
+
 
     implementation("io.github.theapache64:rebugger:1.0.0-rc03")
 }

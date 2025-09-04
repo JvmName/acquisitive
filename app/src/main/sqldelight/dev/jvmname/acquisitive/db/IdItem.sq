@@ -47,6 +47,11 @@ FROM HnIdEntity hid
 JOIN HnItemEntity hi ON hid.id = hi.id
 WHERE hid.id = :id ;
 
+getItemForId:
+SELECT *
+FROM HnItemEntity
+WHERE id = :id AND fetchMode = :mode;
+
 deleteAllByIds{
     DELETE FROM HnIdEntity WHERE HnIdEntity.fetchMode = :fetchMode AND HnIdEntity.id IN :idList;
     DELETE FROM HnItemEntity WHERE HnItemEntity.fetchMode = :fetchMode AND HnItemEntity.id IN :idList ;

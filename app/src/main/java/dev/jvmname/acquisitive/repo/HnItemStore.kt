@@ -3,6 +3,7 @@ package dev.jvmname.acquisitive.repo
 import androidx.compose.ui.util.fastForEach
 import androidx.paging.InvalidatingPagingSourceFactory
 import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.paging3.QueryPagingSource
 import dev.jvmname.acquisitive.db.GetIdRange
 import dev.jvmname.acquisitive.db.HnIdEntity
@@ -99,6 +100,10 @@ class HnItemStore(
                 .executeAsOne()
                 .toInt()
         }
+    }
+
+    suspend fun getItem(mode: FetchMode, id: ItemId): HnItemEntity {
+        return db.getItemForId(id, mode).awaitAsOne()
     }
 }
 

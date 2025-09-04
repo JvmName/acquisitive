@@ -2,6 +2,7 @@
 activityCompose = "1.10.1"
 agp = "8.12.1"
 circuit = "0.30.0"
+coil = "3.3.0"
 composeBom = "2025.08.01"
 constraintlayout = "1.1.1"
 coreKtx = "1.17.0"
@@ -20,8 +21,7 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 ksp = { id = "com.google.devtools.ksp", version = "2.2.10-2.0.2" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 poko = "dev.drewhamilton.poko:0.19.3"
-metro = "dev.zacsweers.metro:0.6.3"
-
+metro = "dev.zacsweers.metro:0.6.4"
 
 [libraries]
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayout" }
@@ -45,11 +45,12 @@ circuitx-overlays = { module = "com.slack.circuit:circuitx-overlays", version.re
 circuitx-gestureNav = { module = "com.slack.circuit:circuitx-gesture-navigation", version.ref = "circuit" }
 circuitx-android = { module = "com.slack.circuit:circuitx-android", version.ref = "circuit" }
 
+coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 desugarJdkLibs = "com.android.tools:desugar_jdk_libs:2.1.5"
 
 kotlinx-datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.7.1"
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
-kotlinx-serialization = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0"
 
 sqldelight-driver-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-async = { module = "app.cash.sqldelight:async-extensions", version.ref = "sqldelight" }
@@ -66,3 +67,5 @@ square-moshiAdapters = { module = "dev.zacsweers.moshix:moshi-adapters", version
 square-moshiSealed = { module = "dev.zacsweers.moshix:moshi-sealed-runtime", version.ref = "moshiX" }
 square-moshiSealedCodegen = { module = "dev.zacsweers.moshix:moshi-sealed-codegen", version.ref = "moshiX" }
 square-logcat = "com.squareup.logcat:logcat:0.4"
+
+deferredResource = "com.backbase.oss.deferredresources:deferred-resources-compose-adapter:1.6.1"

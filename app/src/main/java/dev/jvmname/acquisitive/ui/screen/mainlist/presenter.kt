@@ -21,6 +21,7 @@ import com.theapache64.rebugger.Rebugger
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.score
+import dev.jvmname.acquisitive.network.model.url
 import dev.jvmname.acquisitive.repo.HnItemPagerFactory
 import dev.jvmname.acquisitive.repo.HnItemRepository
 import dev.jvmname.acquisitive.ui.screen.commentlist.CommentListScreen
@@ -31,7 +32,6 @@ import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.FetchModeChanged
 import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.ItemClicked
 import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.Refresh
 import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.UpvoteClick
-import dev.jvmname.acquisitive.ui.types.UrlAndHost
 import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
 import dev.zacsweers.metro.AppScope
@@ -67,12 +67,6 @@ class MainScreenPresenter(
         var fetchMode by rememberRetained { mutableStateOf(screen.fetchMode) }
         val presenterScope = rememberRetainedCoroutineScope()
         var isRefreshing by remember { mutableStateOf(false) }
-//        LaunchedEffect(fetchMode) {
-//            repo.stream(fetchMode)
-//                .collectLatest {
-//                    println("New items from stream: ${it.size}")
-//                }
-//        }
 
         val lazyPaged = rememberRetained(fetchMode) {
             pagingFactory(fetchMode)
@@ -81,7 +75,7 @@ class MainScreenPresenter(
                     data.map { (item, rank) ->
                         item.toScreenItem(
                             isHot = item.score >= fetchMode.hotThreshold,
-                            icon = item.prefixIcon(),
+                            suffixIcon = item.prefixIcon(),
                             rank = rank,
                             time = (kotlin.time.Clock.System.now() - item.time).toDateTimePeriod()
                                 .toAbbreviatedDuration(),
@@ -125,8 +119,9 @@ class MainScreenPresenter(
                     fetchMode = event.fetchMode
                 }
 
-                is ItemClicked -> {
-                    navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, event.url.toUri())))
+                is ItemClicked -> presenterScope.launch {
+                    val url = repo.getItem(fetchMode, event.id).url?.toUri() ?: return@launch
+                    navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, url)))
                 }
 
                 is CommentsClick -> {
@@ -178,15 +173,14 @@ class MainScreenPresenter(
         }
 
         @VisibleForTesting
-        internal inline fun extractUrlHost(url: String): UrlAndHost = try {
-            val host = if (url.isBlank()) ""
+        internal inline fun extractUrlHost(url: String): String = try {
+            if (url.isBlank()) ""
             else url.toUri()
                 .host
                 .orEmpty()
                 .removePrefix("www.")
-            UrlAndHost(url, host)
         } catch (e: Exception) {
-            UrlAndHost(url, "")
+            ""
         }
     }
 }

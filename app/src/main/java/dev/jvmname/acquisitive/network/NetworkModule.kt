@@ -30,9 +30,10 @@ interface NetworkComponent {
     }
 
     @Provides
-    fun provideMoshiConverterFactory(moshi: Moshi): MoshiConverterFactory = MoshiConverterFactory.create(moshi)
+    fun provideMoshiConverterFactory(moshi: Moshi): MoshiConverterFactory =
+        MoshiConverterFactory.create(moshi)
 
-    @Provides
+    @[Provides SingleIn(AppScope::class)]
     fun provideOkhttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .addNetworkInterceptor(HttpLoggingInterceptor { logcat(tag = "OkhttpInterceptor") { it } }.apply {

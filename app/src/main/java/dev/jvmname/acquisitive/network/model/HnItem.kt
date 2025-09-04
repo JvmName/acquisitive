@@ -108,3 +108,10 @@ fun HnItem.getDisplayedTitle() = when (this) {
     is HnItem.PollOption -> text.orEmpty()
     is HnItem.Story -> title
 }
+
+val HnItem.url: String?
+    get() = when (this) {
+        is HnItem.Job -> url
+        is HnItem.Story -> url
+        else -> null
+    }
