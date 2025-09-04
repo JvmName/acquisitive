@@ -24,7 +24,7 @@ sealed interface HnScreenItem {
         val titleSuffix: String?,
         val isHot: Boolean,
         val score: Int,
-        val rank: Int,
+        val rank: String,
         val numChildren: Int,
         val authorInfo: Pair<DeferredFormattedString, DeferredText>,
         val urlHost: String?,
@@ -72,7 +72,7 @@ fun HnItem.toScreenItem(
             is HnItem.PollOption -> score
             else -> 0
         },
-        rank = rank,
+        rank = "$rank.",
         urlHost = urlHost,
         favicon = if (urlHost != null) {
             Favicon.Icon("https://icons.duckduckgo.com/ip3/$urlHost.ico")

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Comment
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -41,6 +42,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalResources
@@ -73,6 +75,7 @@ import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.Favicon
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
+import dev.jvmname.acquisitive.util.capitalize
 import dev.zacsweers.metro.AppScope
 import kotlinx.coroutines.flow.flowOf
 import logcat.LogPriority
@@ -124,17 +127,18 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
 @Composable
 private fun FetchModeSwitcher(state: MainListScreen.MainListState) {
     val resources = LocalResources.current
+    val entries = remember { FetchMode.entries }
     TopAppBar(
         modifier = Modifier.wrapContentHeight(),
         title = {
             LargeDropdownMenu(
                 modifier = Modifier.fillMaxWidth(0.55f),
-                items = FetchMode.entries.fastMap {
-                    resources.getString(R.string.stories_dropdown, it)
+                items = entries.fastMap {
+                    resources.getString(R.string.stories_dropdown, it.name.capitalize())
                 },
-                selectedIndex = FetchMode.entries.indexOf(state.fetchMode),
+                selectedIndex = entries.indexOf(state.fetchMode),
                 onItemSelected = { i, _ ->
-                    state.eventSink(MainListEvent.FetchModeChanged(FetchMode.entries[i]))
+                    state.eventSink(MainListEvent.FetchModeChanged(entries[i]))
                 },
                 label = "Mode",
             )
@@ -164,189 +168,187 @@ fun MainListItem(
     item: HnScreenItem,
     eventSink: (MainListEvent) -> Unit,
 ) {
-    when (item) {
-        is HnScreenItem.StoryItem -> OutlinedCard(modifier = modifier) {
-            ConstraintLayout(
-                modifier = modifier
-                    .heightIn(max = CELL_HEIGHT)
-                    .fillMaxWidth()
-                    .clickable { item.urlHost?.let { eventSink(MainListEvent.ItemClicked(item.id)) } }
+    item as HnScreenItem.StoryItem
+    OutlinedCard(modifier = modifier) {
+        ConstraintLayout(
+            modifier = modifier
+                .heightIn(max = CELL_HEIGHT)
+                .fillMaxWidth()
+                .clickable { item.urlHost?.let { eventSink(MainListEvent.ItemClicked(item.id)) } }
+        ) {
+            val (rankScoreBox, actionBox) = createRefs()
+            val (title, urlHost, timeAuthor) = createRefs()
+
+            val startGuide = createGuidelineFromStart(8.dp)
+            val endGuide = createGuidelineFromEnd(8.dp)
+
+            Column(
+                modifier
+                    .constrainAs(rankScoreBox) {
+                        top.linkTo(parent.top)
+                        start.linkTo(startGuide)
+                        bottom.linkTo(parent.bottom)
+                        width = Dimension.preferredWrapContent.atLeast(47.dp)
+                        height = Dimension.fillToConstraints
+                    }
+                    .clip(RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(vertical = 10.dp, horizontal = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                val (rankScoreBox, actionBox) = createRefs()
-                val (title, urlHost, timeAuthor) = createRefs()
-
-                val startGuide = createGuidelineFromStart(8.dp)
-                val endGuide = createGuidelineFromEnd(8.dp)
-
-                Column(
-                    modifier
-                        .constrainAs(rankScoreBox) {
-                            top.linkTo(parent.top)
-                            start.linkTo(startGuide)
-                            bottom.linkTo(parent.bottom)
-                            width = Dimension.preferredWrapContent.atLeast(47.dp)
-                            height = Dimension.fillToConstraints
-                        }
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(vertical = 10.dp, horizontal = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        item.rank.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        item.score.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (item.isHot) MaterialTheme.colorScheme.hotColor else Color.Unspecified,
-                        fontWeight = if (item.isHot) FontWeight.Bold else LocalTextStyle.current.fontWeight
-                    )
-                    if (item.isHot) {
-                        Icon(
-                            Icons.Default.LocalFireDepartment,
-                            "hot",
-                            tint = MaterialTheme.colorScheme.hotColor,
-                        )
-                    }
-                }
-
                 Text(
-                    buildTitleText(item),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier
-                        .constrainAs(title) {
-                            top.linkTo(parent.top, margin = 8.dp)
-                            start.linkTo(rankScoreBox.end, margin = 8.dp)
-                            end.linkTo(endGuide)
-                            width = Dimension.fillToConstraints
-                        }
-                )
-
-                if (item.urlHost != null) {
-                    Row(
-                        Modifier.constrainAs(urlHost) {
-                            top.linkTo(title.bottom)
-                            start.linkTo(rankScoreBox.end, margin = 8.dp)
-                            end.linkTo(actionBox.start)
-                            width = Dimension.fillToConstraints
-                        },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        when (item.favicon) {
-                            is Favicon.Icon -> AsyncImage(
-                                model = item.favicon.url,
-                                contentDescription = "favicon",
-                                modifier = Modifier.size(14.dp),
-                                fallback = rememberVectorPainter(Icons.Default.Public)
-                            )
-
-                            is Favicon.Default -> Icon(
-                                item.favicon.vector,
-                                "",
-                                Modifier.size(14.dp)
-                            )
-                        }
-                        Spacer(Modifier.size(3.dp))
-                        Text(
-                            item.urlHost, style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier,
-                            textAlign = TextAlign.Start,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                } else {
-                    Spacer(Modifier.constrainAs(urlHost) {
-                        top.linkTo(title.bottom)
-                        start.linkTo(rankScoreBox.end, margin = 8.dp)
-                    })
-                }
-
-                Text(
-                    text = item.authorInfo.let { (dead, author) ->
-                        rememberResolvedString(dead, rememberResolvedString(author))
-                    },
+                    item.rank.toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.constrainAs(timeAuthor) {
-                        top.linkTo(urlHost.bottom)
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    item.score.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (item.isHot) MaterialTheme.colorScheme.hotColor else Color.Unspecified,
+                    fontWeight = if (item.isHot) FontWeight.Bold else LocalTextStyle.current.fontWeight
+                )
+                if (item.isHot) {
+                    Icon(
+                        Icons.Default.LocalFireDepartment,
+                        "hot",
+                        tint = MaterialTheme.colorScheme.hotColor,
+                    )
+                }
+            }
+
+            Text(
+                buildTitleText(item),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .constrainAs(title) {
+                        top.linkTo(parent.top, margin = 8.dp)
+                        start.linkTo(rankScoreBox.end, margin = 8.dp)
+                        end.linkTo(endGuide)
+                        width = Dimension.fillToConstraints
+                    }
+            )
+
+            if (item.urlHost != null) {
+                Row(
+                    Modifier.constrainAs(urlHost) {
+                        top.linkTo(title.bottom)
                         start.linkTo(rankScoreBox.end, margin = 8.dp)
                         end.linkTo(actionBox.start)
                         width = Dimension.fillToConstraints
                     },
-                    textAlign = TextAlign.Start,
-                    overflow = TextOverflow.Ellipsis
-                )
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    when (item.favicon) {
+                        is Favicon.Icon -> AsyncImage(
+                            model = item.favicon.url,
+                            contentDescription = "favicon",
+                            modifier = Modifier.size(14.dp),
+                            fallback = rememberVectorPainter(Icons.Default.Public)
+                        )
 
-                //TODO: fork Swipe and put the mutative actions on the righthand side
-                Row(modifier = Modifier.constrainAs(actionBox) {
+                        is Favicon.Default -> Icon(
+                            item.favicon.vector,
+                            "",
+                            Modifier.size(14.dp)
+                        )
+                    }
+                    Spacer(Modifier.size(3.dp))
+                    Text(
+                        item.urlHost, style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier,
+                        textAlign = TextAlign.Start,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+            } else {
+                Spacer(Modifier.constrainAs(urlHost) {
                     top.linkTo(title.bottom)
-                    end.linkTo(endGuide)
-                    bottom.linkTo(timeAuthor.bottom)
-                    height = Dimension.wrapContent
-                    width = Dimension.wrapContent
-                }) {
-                    if (!item.isDeleted && !item.isDead) {
-                        IconButton(onClick = {
-                            eventSink(MainListEvent.FavoriteClick)
-                        }) {
-                            Icon(Icons.Outlined.FavoriteBorder, "Favorite")
-                        }
+                    start.linkTo(rankScoreBox.end, margin = 8.dp)
+                })
+            }
 
-                        IconButton(onClick = {
-                            eventSink(MainListEvent.UpvoteClick)
+            Text(
+                text = item.authorInfo.let { (dead, author) ->
+                    rememberResolvedString(dead, rememberResolvedString(author))
+                },
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.constrainAs(timeAuthor) {
+                    top.linkTo(urlHost.bottom)
+                    start.linkTo(rankScoreBox.end, margin = 8.dp)
+                    end.linkTo(actionBox.start)
+                    width = Dimension.fillToConstraints
+                },
+                textAlign = TextAlign.Start,
+                overflow = TextOverflow.Ellipsis
+            )
 
-                        }) {
-                            Icon(Icons.Outlined.Recommend, "Upvote")
-                        }
+            //TODO: fork Swipe and put the mutative actions on the righthand side
+            Row(modifier = Modifier.constrainAs(actionBox) {
+                top.linkTo(title.bottom)
+                end.linkTo(endGuide)
+                bottom.linkTo(timeAuthor.bottom)
+                height = Dimension.wrapContent
+                width = Dimension.wrapContent
+            }) {
+                if (!item.isDeleted && !item.isDead) {
+                    IconButton(onClick = {
+                        eventSink(MainListEvent.FavoriteClick)
+                    }) {
+                        Icon(Icons.Outlined.FavoriteBorder, "Favorite")
                     }
 
-                    TextButton(
-                        onClick = {
-                            eventSink(MainListEvent.CommentsClick(item.id))
+                    IconButton(onClick = {
+                        eventSink(MainListEvent.UpvoteClick)
 
-                        },
-                        colors = with(
-                            IconButtonDefaults.iconButtonColors()
-                        ) {
-                            ButtonColors(
-                                containerColor = containerColor,
-                                contentColor = contentColor,
-                                disabledContainerColor = disabledContainerColor,
-                                disabledContentColor = disabledContentColor
-                            )
-                        },
+                    }) {
+                        Icon(Icons.Outlined.Recommend, "Upvote")
+                    }
+                }
+
+                TextButton(
+                    onClick = {
+                        eventSink(MainListEvent.CommentsClick(item.id))
+
+                    },
+                    colors = with(
+                        IconButtonDefaults.iconButtonColors()
                     ) {
-                        val icon = if (item.isHot) Icons.Outlined.LocalFireDepartment
-                        else Icons.AutoMirrored.Outlined.Comment
+                        ButtonColors(
+                            containerColor = containerColor,
+                            contentColor = contentColor,
+                            disabledContainerColor = disabledContainerColor,
+                            disabledContentColor = disabledContentColor
+                        )
+                    },
+                ) {
+                    val icon = if (item.isHot) Icons.Outlined.LocalFireDepartment
+                    else Icons.AutoMirrored.Outlined.Comment
 
-                        val cachedColor = LocalContentColor.current
-                        val hotColor = MaterialTheme.colorScheme.hotColor
-                        CompositionLocalProvider(LocalContentColor.providesComputed {
-                            if (item.isHot) hotColor
-                            else cachedColor
-                        }) {
-                            Icon(icon, "Comments")
-                            if (item.numChildren > 0) {
-                                Text(
-                                    item.numChildren.toString(),
-                                    modifier = Modifier.padding(start = 2.dp)
-                                )
-                            }
+                    val cachedColor = LocalContentColor.current
+                    val hotColor = MaterialTheme.colorScheme.hotColor
+                    CompositionLocalProvider(LocalContentColor.providesComputed {
+                        if (item.isHot) hotColor
+                        else cachedColor
+                    }) {
+                        Icon(icon, "Comments")
+                        if (item.numChildren > 0) {
+                            Text(
+                                item.numChildren.toString(),
+                                modifier = Modifier.padding(start = 2.dp)
+                            )
                         }
                     }
+                }
 
-                    if (!item.isDeleted && !item.isDead) {
-                        IconButton(onClick = { eventSink(MainListEvent.AddComment) }) {
-                            Icon(Icons.Outlined.AddComment, "Comment")
-                        }
+                if (!item.isDeleted && !item.isDead) {
+                    IconButton(onClick = { eventSink(MainListEvent.AddComment) }) {
+                        Icon(Icons.Outlined.AddComment, "Comment")
                     }
                 }
             }
         }
-
-        is HnScreenItem.CommentItem -> TODO("won't happen")
     }
 }
 
@@ -384,8 +386,7 @@ fun PreviewMainList() {
                 List(15) { storyItem(it) },
                 sourceLoadStates = LoadStates(nl, nl, nl),
                 mediatorLoadStates = LoadStates(nl, nl, nl),
-
-                )
+            )
         )
     }.collectAsLazyPagingItems()
 
@@ -408,10 +409,10 @@ private fun storyItem(id: Int): HnScreenItem = HnScreenItem.StoryItem(
     numChildren = 121 + id,
     authorInfo = Pair(
         DeferredFormattedString.Constant("%s"),
-        DeferredText.Constant("19h - JvmName")
+        DeferredText.Constant("19h • JvmName")
     ),
     isDead = false,
     isDeleted = false,
     titleSuffix = "💼",
-    rank = id
+    rank = "$id."
 )

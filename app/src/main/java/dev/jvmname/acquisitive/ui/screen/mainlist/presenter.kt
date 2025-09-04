@@ -46,6 +46,7 @@ import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.toDateTimePeriod
 import logcat.LogPriority
 import logcat.logcat
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("NOTHING_TO_INLINE")
@@ -77,13 +78,9 @@ class MainScreenPresenter(
                             isHot = item.score >= fetchMode.hotThreshold,
                             suffixIcon = item.prefixIcon(),
                             rank = rank,
-                            time = (kotlin.time.Clock.System.now() - item.time).toDateTimePeriod()
+                            time = (Clock.System.now() - item.time).toDateTimePeriod()
                                 .toAbbreviatedDuration(),
-                            urlHost = when (item) {
-                                is HnItem.Job -> item.url?.let(::extractUrlHost)
-                                is HnItem.Story -> item.url?.let(::extractUrlHost)
-                                else -> null
-                            },
+                            urlHost = item.url?.let(::extractUrlHost)
                         )
                     }
                 }
