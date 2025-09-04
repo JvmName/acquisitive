@@ -1,4 +1,4 @@
-package dev.jvmname.acquisitive.ui.screen.mainlist
+package dev.jvmname.acquisitive.ui.screen.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,20 +9,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Comment
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.outlined.AddComment
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocalFireDepartment
-import androidx.compose.material.icons.outlined.Recommend
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -111,7 +110,7 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
                             key = paged.itemKey { it.id },
                             itemContent = { index ->
                                 MainListItem(
-                                    modifier,
+                                    modifier.animateItem(),
                                     paged[index] ?: return@items,
                                     state.eventSink
                                 )
@@ -172,7 +171,7 @@ fun MainListItem(
     OutlinedCard(modifier = modifier) {
         ConstraintLayout(
             modifier = modifier
-                .heightIn(max = CELL_HEIGHT)
+                .wrapContentHeight()
                 .fillMaxWidth()
                 .clickable { item.urlHost?.let { eventSink(MainListEvent.ItemClicked(item.id)) } }
         ) {
@@ -183,7 +182,7 @@ fun MainListItem(
             val endGuide = createGuidelineFromEnd(8.dp)
 
             Column(
-                modifier
+                Modifier
                     .constrainAs(rankScoreBox) {
                         top.linkTo(parent.top)
                         start.linkTo(startGuide)
@@ -198,15 +197,15 @@ fun MainListItem(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    item.rank.toString(),
+                    item.rank,
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     item.score.toString(),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (item.isHot) MaterialTheme.colorScheme.hotColor else Color.Unspecified,
-                    fontWeight = if (item.isHot) FontWeight.Bold else LocalTextStyle.current.fontWeight
+                    fontWeight = if (item.isHot) FontWeight.SemiBold else LocalTextStyle.current.fontWeight
                 )
                 if (item.isHot) {
                     Icon(
@@ -219,7 +218,8 @@ fun MainListItem(
 
             Text(
                 buildTitleText(item),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .constrainAs(title) {
                         top.linkTo(parent.top, margin = 8.dp)
@@ -239,18 +239,20 @@ fun MainListItem(
                     },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    when (item.favicon) {
+                    when (val favicon = item.favicon) {
                         is Favicon.Icon -> AsyncImage(
-                            model = item.favicon.url,
+                            model = favicon.url,
                             contentDescription = "favicon",
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape),
                             fallback = rememberVectorPainter(Icons.Default.Public)
                         )
 
                         is Favicon.Default -> Icon(
-                            item.favicon.vector,
+                            favicon.vector,
                             "",
-                            Modifier.size(14.dp)
+                            Modifier.size(12.dp)
                         )
                     }
                     Spacer(Modifier.size(3.dp))
@@ -298,23 +300,11 @@ fun MainListItem(
                     }) {
                         Icon(Icons.Outlined.FavoriteBorder, "Favorite")
                     }
-
-                    IconButton(onClick = {
-                        eventSink(MainListEvent.UpvoteClick)
-
-                    }) {
-                        Icon(Icons.Outlined.Recommend, "Upvote")
-                    }
                 }
 
                 TextButton(
-                    onClick = {
-                        eventSink(MainListEvent.CommentsClick(item.id))
-
-                    },
-                    colors = with(
-                        IconButtonDefaults.iconButtonColors()
-                    ) {
+                    onClick = { eventSink(MainListEvent.CommentsClick(item.id)) },
+                    colors = with(IconButtonDefaults.iconButtonColors()) {
                         ButtonColors(
                             containerColor = containerColor,
                             contentColor = contentColor,
@@ -336,15 +326,13 @@ fun MainListItem(
                         if (item.numChildren > 0) {
                             Text(
                                 item.numChildren.toString(),
-                                modifier = Modifier.padding(start = 2.dp)
+                                modifier = Modifier
+                                    .padding(start = 2.dp)
+                                    .width(33.dp)
                             )
+                        } else {
+                            Spacer(Modifier.width(33.dp))
                         }
-                    }
-                }
-
-                if (!item.isDeleted && !item.isDead) {
-                    IconButton(onClick = { eventSink(MainListEvent.AddComment) }) {
-                        Icon(Icons.Outlined.AddComment, "Comment")
                     }
                 }
             }

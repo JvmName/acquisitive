@@ -57,5 +57,7 @@ deleteAllByIds{
     DELETE FROM HnItemEntity WHERE HnItemEntity.fetchMode = :fetchMode AND HnItemEntity.id IN :idList ;
 }
 
-deleteIdByFetchMode:
-DELETE FROM HnIdEntity WHERE fetchMode = :fetchMode;
+deleteIdByFetchMode{
+    DELETE FROM HnIdEntity WHERE fetchMode = :fetchMode;
+    DELETE FROM HnItemEntity WHERE fetchMode = :fetchMode;
+}

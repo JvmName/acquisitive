@@ -1,6 +1,5 @@
 package dev.jvmname.acquisitive
 
-import AcquisitiveApp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,7 +12,7 @@ import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
 import com.slack.circuitx.gesturenavigation.GestureNavigationDecorationFactory
 import com.theapache64.rebugger.RebuggerConfig
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListScreen
+import dev.jvmname.acquisitive.ui.screen.main.MainListScreen
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
@@ -30,7 +29,7 @@ class MainActivity : ComponentActivity() {
         System.setProperty("kotlinx.coroutines.debug", if (BuildConfig.DEBUG) "on" else "off")
         enableEdgeToEdge()
 
-        val graph = (applicationContext as AcquisitiveApp).graph
+        val graph = (application as AcquisitiveApp).graph
         logcat { "***entering compose" }
         setContent {
             CircuitCompositionLocals(graph.circuit) {

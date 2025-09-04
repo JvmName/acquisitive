@@ -1,4 +1,4 @@
-package dev.jvmname.acquisitive.ui.screen.mainlist
+package dev.jvmname.acquisitive.ui.screen.main
 
 import android.content.Intent
 import androidx.annotation.VisibleForTesting
@@ -24,14 +24,12 @@ import dev.jvmname.acquisitive.network.model.score
 import dev.jvmname.acquisitive.network.model.url
 import dev.jvmname.acquisitive.repo.HnItemPagerFactory
 import dev.jvmname.acquisitive.repo.HnItemRepository
-import dev.jvmname.acquisitive.ui.screen.commentlist.CommentListScreen
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.AddComment
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.CommentsClick
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.FavoriteClick
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.FetchModeChanged
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.ItemClicked
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.Refresh
-import dev.jvmname.acquisitive.ui.screen.mainlist.MainListEvent.UpvoteClick
+import dev.jvmname.acquisitive.ui.screen.comments.CommentListScreen
+import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.CommentsClick
+import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.FavoriteClick
+import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.FetchModeChanged
+import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.ItemClicked
+import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.Refresh
 import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
 import dev.zacsweers.metro.AppScope
@@ -43,7 +41,8 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.DateTimePeriod
-import kotlinx.datetime.toDateTimePeriod
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.periodUntil
 import logcat.LogPriority
 import logcat.logcat
 import kotlin.time.Clock
@@ -78,7 +77,7 @@ class MainScreenPresenter(
                             isHot = item.score >= fetchMode.hotThreshold,
                             suffixIcon = item.prefixIcon(),
                             rank = rank,
-                            time = (Clock.System.now() - item.time).toDateTimePeriod()
+                            time =item.time.periodUntil(Clock.System.now(), TimeZone.currentSystemDefault())
                                 .toAbbreviatedDuration(),
                             urlHost = item.url?.let(::extractUrlHost)
                         )
@@ -112,23 +111,14 @@ class MainScreenPresenter(
             pagedStories = lazyPaged,
         ) { event ->
             when (event) {
-                is FetchModeChanged -> {
-                    fetchMode = event.fetchMode
-                }
-
+                is FetchModeChanged -> fetchMode = event.fetchMode
+                is CommentsClick -> navigator.goTo(CommentListScreen(event.id))
+                FavoriteClick -> TODO()
+                Refresh -> isRefreshing = true
                 is ItemClicked -> presenterScope.launch {
                     val url = repo.getItem(fetchMode, event.id).url?.toUri() ?: return@launch
                     navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, url)))
                 }
-
-                is CommentsClick -> {
-                    navigator.goTo(CommentListScreen(event.id))
-                }
-
-                AddComment -> navigator
-                FavoriteClick -> TODO()
-                UpvoteClick -> TODO()
-                Refresh -> isRefreshing = true
             }
         }
     }

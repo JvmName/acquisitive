@@ -1,4 +1,4 @@
-package dev.jvmname.acquisitive.ui.screen.commentlist
+package dev.jvmname.acquisitive.ui.screen.comments
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

@@ -2,6 +2,9 @@ package dev.jvmname.acquisitive.util
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.RememberObserver
+import androidx.compose.ui.text.capitalize
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.toLowerCase
 import com.slack.circuit.retained.rememberRetained
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
@@ -18,14 +21,11 @@ import kotlinx.coroutines.flow.toList
 import logcat.asLog
 import logcat.logcat
 import java.io.IOException
-import java.util.Locale
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-fun String.capitalize(): String = replaceFirstChar {
-    if (it.isLowerCase()) it.titlecase(Locale.getDefault())
-    else it.toString()
-}
+@Composable
+fun String.capitalize(): String = toLowerCase(Locale.current).capitalize(Locale.current)
 
 
 //https://androidstudygroup.slack.com/archives/C03MHQ3NU/p1666367020309989

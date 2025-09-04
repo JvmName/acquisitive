@@ -1,4 +1,4 @@
-package dev.jvmname.acquisitive.ui.screen.mainlist
+package dev.jvmname.acquisitive.ui.screen.main
 
 import androidx.paging.compose.LazyPagingItems
 import com.slack.circuit.runtime.CircuitUiEvent
@@ -24,7 +24,5 @@ sealed class MainListEvent : CircuitUiEvent {
     data class ItemClicked(val id: ItemId) : MainListEvent()
     data class CommentsClick(val id: ItemId) : MainListEvent()
     data object FavoriteClick : MainListEvent()
-    data object UpvoteClick : MainListEvent()
-    data object AddComment : MainListEvent()
     data object Refresh : MainListEvent()
 }
