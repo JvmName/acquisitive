@@ -29,8 +29,20 @@ CREATE TABLE IF NOT EXISTS HnItemEntity (
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE INDEX IF NOT EXISTS HnItemEntity_fetchMode ON HnItemEntity(fetchMode);
-CREATE INDEX IF NOT EXISTS HnItemEntity_rank ON HnItemEntity(rank);
+CREATE INDEX IF NOT EXISTS HnItemEntity_fetchMode_rank ON HnItemEntity(fetchMode, rank);
+
+countPaging:
+SELECT COUNT(*)
+FROM HnItemEntity
+WHERE fetchMode = :fetchMode;
+
+itemsPaging:
+SELECT *
+FROM HnItemEntity
+WHERE fetchMode = :fetchMode
+ORDER BY rank ASC
+LIMIT :limit OFFSET :offset
+;
 
 keyedPaging:
 SELECT * FROM HnItemEntity

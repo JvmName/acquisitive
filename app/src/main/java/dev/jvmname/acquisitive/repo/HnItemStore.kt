@@ -16,7 +16,6 @@ import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
-import logcat.logcat
 import kotlin.time.Instant
 
 
@@ -28,38 +27,50 @@ class HnItemStore(
     fun pagingSource(
         mode: FetchMode,
         mapper: HnItemEntityMapper,
-    ): InvalidatingPagingSourceFactory<ItemId, HnRankedItem> {
+    ): InvalidatingPagingSourceFactory<Int, HnRankedItem> {
         return InvalidatingPagingSourceFactory {
             QueryPagingSource(
                 transacter = itemDb,
                 context = Dispatchers.IO,
-                queryProvider = { beginIncl, endIncl ->
-                    itemDb.keyedPaging(mode, beginIncl, endIncl, mapper = mapper)
-                        .also { it.addListener { logcat { "!!Query results changed - keyedPaging" } } }
-                },
-                pageBoundariesProvider = { anchor, limit ->
-                    itemDb.keyedPageBoundaries(fetchMode = mode, limit = limit, anchor = anchor)
-                        .also { it.addListener { logcat { "!!Query results changed - keyedPageBoundaries" } } }
+                countQuery = itemDb.countPaging(mode),
+                queryProvider = { limit, offset ->
+                    itemDb.itemsPaging(
+                        fetchMode = mode,
+                        limit = limit,
+                        offset = offset,
+                        mapper = mapper
+                    )
                 }
             )
+            /*  QueryPagingSource(
+                  transacter = itemDb,
+                  context = Dispatchers.IO,
+                  queryProvider = { beginIncl, endIncl ->
+                      itemDb.keyedPaging(mode, beginIncl, endIncl, mapper = mapper)
+                          .also { it.addListener { logcat { "!!Query results changed - keyedPaging" } } }
+                  },
+                  pageBoundariesProvider = { anchor, limit ->
+                      itemDb.keyedPageBoundaries(fetchMode = mode, limit = limit, anchor = anchor)
+                          .also { it.addListener { logcat { "!!Query results changed - keyedPageBoundaries" } } }
+                  }
+              )*/
         }
     }
 
     suspend fun getIdRange(mode: FetchMode, start: ItemId?, window: Int): List<GetIdRange> {
-        if (start == null) return emptyList()
         return db.getIdRange(fetchMode = mode, startId = start, window = window).awaitAsList()
     }
 
     fun refresh(mode: FetchMode, ids: ItemIdArray, items: List<HnItem>) = db.transaction {
         db.deleteIdByFetchMode(mode)
 
-        val lastItemIdx = items.lastIndex
+//        val lastItemIdx = items.lastIndex
         ids.forEachIndexed { i, id ->
             db.insertId(HnIdEntity(id, mode, i))
-            //use the same idx for [items], acknowledging that it will have fewer elements than [ids]
+           /* //use the same idx for [items], acknowledging that it will have fewer elements than [ids]
             if (i <= lastItemIdx) {
                 db.insertItem(items[i].toEntity(i, mode))
-            }
+            }*/
         }
     }
 
@@ -106,27 +117,6 @@ class HnItemStore(
         return db.getItemForId(id, mode).awaitAsOne()
     }
 }
-
-private fun toRankedItem(
-    id: ItemId,
-    fetchMode: FetchMode,
-    rank: Int,
-    type: String,
-    author: String?,
-    time: Instant,
-    dead: Boolean?,
-    deleted: Boolean?,
-    kids: ItemIdArray?,
-    title: String?,
-    url: String?,
-    text: String?,
-    score: Int?,
-    descendants: Int?,
-    parent: ItemId?,
-    poll: ItemId?,
-    parts: ItemIdArray?,
-    id_: ItemId,
-): HnRankedItem = TODO()
 
 internal typealias HnItemEntityMapper = (
     id: ItemId,

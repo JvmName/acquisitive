@@ -8,5 +8,4 @@ CREATE TABLE IF NOT EXISTS HnIdEntity (
     rank INTEGER AS Int NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS HnIdEntity_fetchMode ON HnIdEntity(fetchMode);
-CREATE INDEX IF NOT EXISTS HnIdEntity_rank ON HnIdEntity(rank);
+CREATE INDEX IF NOT EXISTS HnIdEntity_fetchMode_rank ON HnIdEntity(fetchMode, rank);

@@ -6,7 +6,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingState
 import app.cash.paging.RemoteMediator
 import dev.jvmname.acquisitive.network.model.FetchMode
-import dev.jvmname.acquisitive.network.model.ItemId
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.Inject
@@ -21,7 +20,7 @@ class HnItemPagerFactory(
     private val mediatorFactory: HnItemMediator.Factory,
     private val repo: HnItemRepository,
 ) {
-    operator fun invoke(mode: FetchMode): Pager<ItemId, HnRankedItem> {
+    operator fun invoke(mode: FetchMode): Pager<Int, HnRankedItem> {
         val psf = repo.pagingSource(mode)
         return Pager(
             config = PagingConfig(
@@ -29,6 +28,7 @@ class HnItemPagerFactory(
                 initialLoadSize = 24,
                 enablePlaceholders = true
             ),
+            initialKey = 0,
             remoteMediator = mediatorFactory(mode, psf::invalidate),
             pagingSourceFactory = psf
         )
@@ -40,7 +40,7 @@ class HnItemMediator(
     @Assisted private val mode: FetchMode,
     @Assisted private val onInvalidate: () -> Unit,
     private val repo: HnItemRepository,
-) : RemoteMediator<ItemId, HnRankedItem>() {
+) : RemoteMediator<Int, HnRankedItem>() {
 
     @AssistedFactory
     fun interface Factory {
@@ -55,7 +55,7 @@ class HnItemMediator(
 
     override suspend fun load(
         loadType: LoadType,
-        state: PagingState<ItemId, HnRankedItem>,
+        state: PagingState<Int, HnRankedItem>,
     ): MediatorResult {
         logcat { "load: $loadType" }
         val pageSize = state.config.pageSize
@@ -65,7 +65,8 @@ class HnItemMediator(
                 LoadType.APPEND -> {
                     //anything more to load?
                     val startId = state.lastItemOrNull()?.item?.id
-                    repo.appendWindow(
+                    //appendWindow returns true if more items to fetch, but Paging API is reversed
+                    !repo.appendWindow(
                         fetchMode = mode,
                         startId = startId,
                         loadSize = pageSize
@@ -79,7 +80,7 @@ class HnItemMediator(
             }
 
             return MediatorResult.Success(endOfPaginationReached = endOfPage).also {
-                logcat { "MediatorResult: $it" }
+                logcat { "MediatorResult: $it ${it.endOfPaginationReached}" }
             }
         } catch (e: IOException) {
             logcat { e.asLog() }

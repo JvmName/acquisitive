@@ -341,11 +341,11 @@ fun MainListItem(
 }
 
 @Composable
-private fun buildTitleText(item: HnScreenItem.StoryItem): String {
+private fun buildTitleText(item: HnScreenItem.StoryItem): String = remember {
     val title = AnnotatedString.fromHtml(item.title)
     val icon = item.titleSuffix.orEmpty()
     //normally wouldn't be this fussy but everything here is inside a list-loop
-    return buildString(title.length + 1 + icon.length) {
+    return@remember buildString(title.length + 1 + icon.length) {
         append(title)
         append(" ")
         append(icon)

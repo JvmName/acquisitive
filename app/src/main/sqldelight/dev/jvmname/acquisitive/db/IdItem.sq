@@ -5,13 +5,16 @@ SELECT hid.id, hid.rank
 FROM HnIdEntity hid
 WHERE
     hid.fetchMode = :fetchMode
-    AND hid.rank
-        BETWEEN
-            (SELECT rank FROM HnIdEntity WHERE HnIdEntity.id = :startId)
-            AND
-            (SELECT (rank + :window)-1 FROM HnIdEntity WHERE HnIdEntity.id = :startId)
+    AND hid.rank BETWEEN IIF(
+        :startId IS NOT NULL,
+        (SELECT rank FROM HnIdEntity WHERE HnIdEntity.id = :startId),
+        0
+    ) AND IIF(
+        :startId IS NOT NULL,
+        (SELECT (rank + :window) - 1 FROM HnIdEntity WHERE HnIdEntity.id = :startId),
+        :window - 1
+   )
 ORDER BY hid.rank ASC;
-
 
 insertId:
 INSERT OR REPLACE INTO HnIdEntity VALUES ?;
@@ -41,11 +44,10 @@ VALUES
 getRankDistanceForId:
 SELECT
     hid.rank,
-    COALESCE((SELECT MAX(hid.rank)), 0) AS idMax,
-    COALESCE((SELECT MAX(hi.rank )), 0) AS itemMax
+    COALESCE((SELECT MAX(rank) FROM HnIdEntity), 0) AS idMax,
+    COALESCE((SELECT MAX(rank) FROM HnItemEntity), 0) AS itemMax
 FROM HnIdEntity hid
-JOIN HnItemEntity hi ON hid.id = hi.id
-WHERE hid.id = :id ;
+WHERE hid.id = :id;
 
 getItemForId:
 SELECT *

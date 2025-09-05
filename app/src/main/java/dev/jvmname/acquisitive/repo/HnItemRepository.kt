@@ -20,15 +20,15 @@ class HnItemRepository(
     private val store: HnItemStore,
 ) {
 
-    fun pagingSource(mode: FetchMode): InvalidatingPagingSourceFactory<ItemId, HnRankedItem> {
+    fun pagingSource(mode: FetchMode): InvalidatingPagingSourceFactory<Int, HnRankedItem> {
         return store.pagingSource(mode, ::ExpandedEntityToRankedItem)
     }
 
     suspend fun refresh(fetchMode: FetchMode, pageSize: Int): Boolean {
         return withContext(Dispatchers.IO) {
             val ids = client.getStories(fetchMode)
-            val items = ids.take(pageSize).fetchAsync { client.getItem(it) }
-            store.refresh(fetchMode, ids, items)
+//            val items = ids.take(pageSize).fetchAsync { client.getItem(it) }
+            store.refresh(fetchMode, ids, emptyList())
             false
         }
     }
@@ -39,7 +39,6 @@ class HnItemRepository(
         startId: ItemId?,
         loadSize: Int,
     ): Boolean = withContext(Dispatchers.IO) {
-        if (startId == null) return@withContext true
         val ids = store.getIdRange(fetchMode, startId, loadSize)
         val items = ids.fetchAsync { client.getItem(it.id) }
         val zipped = ids.fastZip(items) { id, item -> item.toEntity(id.rank, fetchMode) }

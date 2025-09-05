@@ -5,8 +5,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import app.cash.sqldelight.EnumColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
-import app.cash.sqldelight.logs.LogSqliteDriver
-import dev.jvmname.acquisitive.BuildConfig
 import dev.jvmname.acquisitive.db.HnIdEntity
 import dev.jvmname.acquisitive.db.HnItemEntity
 import dev.jvmname.acquisitive.db.HnItemQueries
@@ -20,7 +18,6 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
-import logcat.logcat
 
 
 @ContributesTo(AppScope::class)
@@ -40,9 +37,9 @@ interface DatabaseModule {
                 }
             }
         )
-        return if (BuildConfig.DEBUG) {
+        return /*if (BuildConfig.DEBUG) {
             LogSqliteDriver(driver, { logcat("SqliteDriver") { it } })
-        } else driver;
+        } else */driver;
     }
 
     @[Provides SingleIn(AppScope::class)]
