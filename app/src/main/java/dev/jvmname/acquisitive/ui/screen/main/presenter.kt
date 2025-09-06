@@ -22,14 +22,14 @@ import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.score
 import dev.jvmname.acquisitive.network.model.url
-import dev.jvmname.acquisitive.repo.HnItemPagerFactory
-import dev.jvmname.acquisitive.repo.HnItemRepository
+import dev.jvmname.acquisitive.repo.story.StoryPagerFactory
+import dev.jvmname.acquisitive.repo.story.StoryRepository
 import dev.jvmname.acquisitive.ui.screen.comments.CommentListScreen
-import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.CommentsClick
-import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.FavoriteClick
-import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.FetchModeChanged
-import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.ItemClicked
-import dev.jvmname.acquisitive.ui.screen.main.MainListEvent.Refresh
+import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.CommentsClick
+import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.FavoriteClick
+import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.FetchModeChanged
+import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.Refresh
+import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.StoryClicked
 import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
 import dev.zacsweers.metro.AppScope
@@ -50,20 +50,20 @@ import kotlin.time.Duration.Companion.seconds
 
 @Suppress("NOTHING_TO_INLINE")
 @Inject
-class MainScreenPresenter(
-    private val pagingFactory: HnItemPagerFactory,
-    private val repo: HnItemRepository,
-    @Assisted private val screen: MainListScreen,
+class StoryListPresenter(
+    private val pagingFactory: StoryPagerFactory,
+    private val repo: StoryRepository,
+    @Assisted private val screen: StoryListScreen,
     @Assisted private val navigator: Navigator,
-) : Presenter<MainListScreen.MainListState> {
+) : Presenter<StoryListScreen.StoryListState> {
 
-    @[AssistedFactory CircuitInject(MainListScreen::class, AppScope::class)]
+    @[AssistedFactory CircuitInject(StoryListScreen::class, AppScope::class)]
     fun interface Factory {
-        fun create(screen: MainListScreen, navigator: Navigator): MainScreenPresenter
+        fun create(screen: StoryListScreen, navigator: Navigator): StoryListPresenter
     }
 
     @Composable
-    override fun present(): MainListScreen.MainListState {
+    override fun present(): StoryListScreen.StoryListState {
         var fetchMode by rememberRetained { mutableStateOf(screen.fetchMode) }
         val presenterScope = rememberRetainedCoroutineScope()
         var isRefreshing by remember { mutableStateOf(false) }
@@ -72,14 +72,15 @@ class MainScreenPresenter(
             pagingFactory(fetchMode)
                 .flow
                 .mapLatest { data ->
-                    data.map { (item, rank) ->
-                        item.toScreenItem(
-                            isHot = item.score >= fetchMode.hotThreshold,
-                            suffixIcon = item.prefixIcon(),
-                            rank = rank,
-                            time =item.time.periodUntil(Clock.System.now(), TimeZone.currentSystemDefault())
+                    data.map { ranked ->
+                        val story = ranked.item
+                        story.toScreenItem(
+                            isHot = story.score >= fetchMode.hotThreshold,
+                            suffixIcon = story.prefixIcon(),
+                            rank = ranked.rank,
+                            time =story.time.periodUntil(Clock.System.now(), TimeZone.currentSystemDefault())
                                 .toAbbreviatedDuration(),
-                            urlHost = item.url?.let(::extractUrlHost)
+                            urlHost = story.url?.let(::extractUrlHost)
                         )
                     }
                 }
@@ -105,17 +106,17 @@ class MainScreenPresenter(
             ),
             logger = { tag, msg -> logcat(LogPriority.WARN) { "$tag: $msg" } }
         )
-        return MainListScreen.MainListState(
+        return StoryListScreen.StoryListState(
             isRefreshing = isRefreshing,
             fetchMode = fetchMode,
             pagedStories = lazyPaged,
         ) { event ->
             when (event) {
                 is FetchModeChanged -> fetchMode = event.fetchMode
-                is CommentsClick -> navigator.goTo(CommentListScreen(event.id))
+                is CommentsClick -> navigator.goTo(CommentListScreen(event.id, fetchMode))
                 FavoriteClick -> TODO()
                 Refresh -> isRefreshing = true
-                is ItemClicked -> presenterScope.launch {
+                is StoryClicked -> presenterScope.launch {
                     val url = repo.getItem(fetchMode, event.id).url?.toUri() ?: return@launch
                     navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, url)))
                 }

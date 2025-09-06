@@ -5,10 +5,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import app.cash.sqldelight.EnumColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
-import dev.jvmname.acquisitive.db.HnIdEntity
-import dev.jvmname.acquisitive.db.HnItemEntity
-import dev.jvmname.acquisitive.db.HnItemQueries
-import dev.jvmname.acquisitive.db.IdItemQueries
+import dev.jvmname.acquisitive.db.CommentEntity
+import dev.jvmname.acquisitive.db.CommentQueries
+import dev.jvmname.acquisitive.db.StoryEntity
+import dev.jvmname.acquisitive.db.StoryId
+import dev.jvmname.acquisitive.db.StoryQueries
 import dev.jvmname.acquisitive.repo.db.AcqDatabase
 import dev.jvmname.acquisitive.repo.db.InstantColumnAdapter
 import dev.jvmname.acquisitive.repo.db.IntLongColumnAdapter
@@ -45,9 +46,10 @@ interface DatabaseModule {
     @[Provides SingleIn(AppScope::class)]
     fun provideDatabase(driver: SqlDriver): AcqDatabase = AcqDatabase(
         driver = driver,
-        HnItemEntityAdapter = HnItemEntity.Adapter(
+        StoryEntityAdapter = StoryEntity.Adapter(
             idAdapter = ItemIdColumnAdapter,
             fetchModeAdapter = EnumColumnAdapter(),
+            typeAdapter = EnumColumnAdapter(),
             timeAdapter = InstantColumnAdapter,
             kidsAdapter = ItemIdArrayColumnAdapter,
             partsAdapter = ItemIdArrayColumnAdapter,
@@ -57,18 +59,25 @@ interface DatabaseModule {
             pollAdapter = ItemIdColumnAdapter,
             rankAdapter = IntLongColumnAdapter
         ),
-        HnIdEntityAdapter = HnIdEntity.Adapter(
+        StoryIdAdapter = StoryId.Adapter(
             idAdapter = ItemIdColumnAdapter,
             fetchModeAdapter = EnumColumnAdapter(),
             rankAdapter = IntLongColumnAdapter,
         ),
-
+        CommentEntityAdapter = CommentEntity.Adapter(
+            idAdapter = ItemIdColumnAdapter,
+            storyIdAdapter = ItemIdColumnAdapter,
+            parentAdapter = ItemIdColumnAdapter,
+            timeAdapter = InstantColumnAdapter,
+            kidsAdapter = ItemIdArrayColumnAdapter,
+            rankAdapter = IntLongColumnAdapter,
+        ),
     )
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideHnItemQueries(database: AcqDatabase): HnItemQueries = database.hnItemQueries
+    fun provideHnItemQueries(database: AcqDatabase): StoryQueries = database.storyQueries
 
     @[Provides SingleIn(AppScope::class)]
-    fun providesHnItemIdQueries(database: AcqDatabase): IdItemQueries = database.idItemQueries
+    fun providesHnItemIdQueries(database: AcqDatabase): CommentQueries = database.commentQueries
 }

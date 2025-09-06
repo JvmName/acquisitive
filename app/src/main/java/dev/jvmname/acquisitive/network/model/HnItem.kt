@@ -7,6 +7,7 @@ import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.util.ItemIdArray
 import dev.zacsweers.moshix.sealed.annotations.TypeLabel
 import kotlinx.parcelize.Parcelize
+import kotlin.time.Instant
 
 @[JvmInline Parcelize Immutable JsonClass(generateAdapter = false)]
 value class ItemId(val id: Int) : Parcelable {
@@ -17,7 +18,7 @@ value class ItemId(val id: Int) : Parcelable {
 sealed interface HnItem {
     val id: ItemId
     val by: String?
-    val time: kotlin.time.Instant
+    val time: Instant
     val dead: Boolean?
     val deleted: Boolean?
     val kids: ItemIdArray?
@@ -26,7 +27,7 @@ sealed interface HnItem {
     class Story(
         override val id: ItemId,
         override val by: String?,
-        override val time: kotlin.time.Instant,
+        override val time: Instant,
         override val dead: Boolean?,
         override val deleted: Boolean?,
         override val kids: ItemIdArray?,
@@ -41,7 +42,7 @@ sealed interface HnItem {
     class Comment(
         override val id: ItemId,
         override val by: String?,
-        override val time: kotlin.time.Instant,
+        override val time: Instant,
         override val dead: Boolean?,
         override val deleted: Boolean?,
         override val kids: ItemIdArray?,
@@ -53,7 +54,7 @@ sealed interface HnItem {
     class Job(
         override val id: ItemId,
         override val by: String?,
-        override val time: kotlin.time.Instant,
+        override val time: Instant,
         override val dead: Boolean?,
         override val deleted: Boolean?,
         override val kids: ItemIdArray?,
@@ -67,7 +68,7 @@ sealed interface HnItem {
     class Poll(
         override val id: ItemId,
         override val by: String?,
-        override val time: kotlin.time.Instant,
+        override val time: Instant,
         override val dead: Boolean?,
         override val deleted: Boolean?,
         override val kids: ItemIdArray?,
@@ -82,7 +83,7 @@ sealed interface HnItem {
     class PollOption(
         override val id: ItemId,
         override val by: String?,
-        override val time: kotlin.time.Instant,
+        override val time: Instant,
         override val dead: Boolean?,
         override val deleted: Boolean?,
         override val kids: ItemIdArray?,

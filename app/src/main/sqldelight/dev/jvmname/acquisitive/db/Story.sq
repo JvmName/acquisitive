@@ -1,0 +1,115 @@
+import dev.jvmname.acquisitive.network.model.FetchMode;
+import dev.jvmname.acquisitive.network.model.ItemId;
+import dev.jvmname.acquisitive.repo.story.ItemType;
+import dev.jvmname.acquisitive.util.ItemIdArray;
+import kotlin.Boolean;
+import kotlin.Int;
+import kotlin.time.Instant;
+
+CREATE TABLE IF NOT EXISTS StoryId (
+    id INTEGER AS ItemId NOT NULL PRIMARY KEY,
+    fetchMode TEXT AS FetchMode NOT NULL,
+    rank INTEGER AS Int NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS StoryId_fetchMode_rank ON StoryId(fetchMode, rank);
+
+CREATE TABLE IF NOT EXISTS StoryEntity (
+   id INTEGER AS ItemId NOT NULL PRIMARY KEY,
+   fetchMode TEXT AS FetchMode NOT NULL,
+   rank INTEGER AS Int NOT NULL,
+   type TEXT AS ItemType NOT NULL,
+   author TEXT,
+   time INTEGER AS Instant NOT NULL,
+   dead INTEGER AS Boolean,
+   deleted INTEGER AS Boolean,
+   kids TEXT AS ItemIdArray,
+   title TEXT,
+   url TEXT,
+   text TEXT,
+   score INTEGER AS Int,
+   descendants INTEGER AS Int,
+   parent INTEGER AS ItemId,
+   poll INTEGER AS ItemId,
+   parts TEXT AS ItemIdArray,
+   FOREIGN KEY(id) REFERENCES StoryId(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE INDEX IF NOT EXISTS StoryEntity_fetchMode_rank ON StoryEntity(fetchMode, rank);
+
+countStoryPaging:
+SELECT COUNT(*)
+FROM StoryEntity
+WHERE fetchMode = :fetchMode;
+
+storyPaging:
+SELECT *
+FROM StoryEntity
+WHERE fetchMode = :fetchMode
+ORDER BY rank ASC
+LIMIT :limit OFFSET :offset
+;
+
+getIdRange:
+SELECT hid.id, hid.rank
+FROM StoryId hid
+WHERE
+    hid.fetchMode = :fetchMode
+    AND hid.rank BETWEEN IIF(
+        :startId IS NOT NULL,
+        (SELECT rank FROM StoryId WHERE StoryId.id = :startId),
+        0
+    ) AND IIF(
+        :startId IS NOT NULL,
+        (SELECT (rank + :window) - 1 FROM StoryId WHERE StoryId.id = :startId),
+        :window - 1
+   )
+ORDER BY hid.rank ASC;
+
+insertId:
+INSERT OR REPLACE INTO StoryId VALUES ?;
+
+insertStory {
+INSERT OR REPLACE INTO StoryId(id, fetchMode, rank)
+VALUES (:id, :fetchMode, :rank);
+
+INSERT OR REPLACE INTO StoryEntity(
+  id, fetchMode, rank, type, author, time,
+  dead, deleted, kids, title, url, text,
+  score, descendants, parent, poll,
+  parts
+)
+VALUES
+  (
+    : id, : fetchMode, : rank, : type, : author,
+    : time, : dead, : deleted, : kids, : title,
+    : url, : text, : score, : descendants,
+    : parent, : poll, : parts
+  );
+}
+
+getRankDistanceForId:
+SELECT
+    hid.rank,
+    COALESCE((SELECT MAX(rank) FROM StoryId), 0) AS idMax,
+    COALESCE((SELECT MAX(rank) FROM StoryEntity), 0) AS itemMax
+FROM StoryId hid
+WHERE hid.id = :id;
+
+getStoryForId:
+SELECT *
+FROM StoryEntity
+WHERE id = :id AND fetchMode = :mode;
+
+deleteAllByIds{
+    DELETE FROM StoryId WHERE StoryId.fetchMode = :fetchMode AND StoryId.id IN :idList;
+    DELETE FROM StoryEntity WHERE StoryEntity.fetchMode = :fetchMode AND StoryEntity.id IN :idList ;
+}
+
+deleteIdByFetchMode{
+    DELETE FROM StoryId WHERE fetchMode = :fetchMode;
+    DELETE FROM StoryEntity WHERE fetchMode = :fetchMode;
+}

@@ -1,4 +1,4 @@
-package dev.jvmname.acquisitive.repo
+package dev.jvmname.acquisitive.repo.story
 
 import androidx.compose.ui.util.fastForEach
 import androidx.paging.InvalidatingPagingSourceFactory
@@ -6,10 +6,9 @@ import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.paging3.QueryPagingSource
 import dev.jvmname.acquisitive.db.GetIdRange
-import dev.jvmname.acquisitive.db.HnIdEntity
-import dev.jvmname.acquisitive.db.HnItemEntity
-import dev.jvmname.acquisitive.db.HnItemQueries
-import dev.jvmname.acquisitive.db.IdItemQueries
+import dev.jvmname.acquisitive.db.StoryEntity
+import dev.jvmname.acquisitive.db.StoryId
+import dev.jvmname.acquisitive.db.StoryQueries
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
@@ -20,21 +19,20 @@ import kotlin.time.Instant
 
 
 @Inject
-class HnItemStore(
-    private val db: IdItemQueries,
-    private val itemDb: HnItemQueries,
+class StoryStore(
+    private val db: StoryQueries,
 ) {
     fun pagingSource(
         mode: FetchMode,
-        mapper: HnItemEntityMapper,
-    ): InvalidatingPagingSourceFactory<Int, HnRankedItem> {
+        mapper: StoryEntityMapper,
+    ): InvalidatingPagingSourceFactory<Int, RankedStory> {
         return InvalidatingPagingSourceFactory {
             QueryPagingSource(
-                transacter = itemDb,
+                transacter = db,
                 context = Dispatchers.IO,
-                countQuery = itemDb.countPaging(mode),
+                countQuery = db.countStoryPaging(mode),
                 queryProvider = { limit, offset ->
-                    itemDb.itemsPaging(
+                    db.storyPaging(
                         fetchMode = mode,
                         limit = limit,
                         offset = offset,
@@ -66,23 +64,23 @@ class HnItemStore(
 
 //        val lastItemIdx = items.lastIndex
         ids.forEachIndexed { i, id ->
-            db.insertId(HnIdEntity(id, mode, i))
-           /* //use the same idx for [items], acknowledging that it will have fewer elements than [ids]
-            if (i <= lastItemIdx) {
-                db.insertItem(items[i].toEntity(i, mode))
-            }*/
+            db.insertId(StoryId(id, mode, i))
+            /* //use the same idx for [items], acknowledging that it will have fewer elements than [ids]
+             if (i <= lastItemIdx) {
+                 db.insertItem(items[i].toEntity(i, mode))
+             }*/
         }
     }
 
     /** @return the distance between the last of [items] and the last id/item in the db */
-    fun updateRange(mode: FetchMode, items: List<HnItemEntity>): Int {
+    fun updateRange(mode: FetchMode, items: List<StoryEntity>): Int {
         if (items.isEmpty()) return 0
 
         val ids = ItemIdArray(items.size) { items[it].id }
         return db.transactionWithResult {
             db.deleteAllByIds(mode, ids)
             items.fastForEach {
-                db.insertIdItem(
+                db.insertStory(
                     id = it.id,
                     fetchMode = it.fetchMode,
                     rank = it.rank,
@@ -113,16 +111,16 @@ class HnItemStore(
         }
     }
 
-    suspend fun getItem(mode: FetchMode, id: ItemId): HnItemEntity {
-        return db.getItemForId(id, mode).awaitAsOne()
+    suspend fun getItem(mode: FetchMode, id: ItemId): StoryEntity {
+        return db.getStoryForId(id, mode).awaitAsOne()
     }
 }
 
-internal typealias HnItemEntityMapper = (
+internal typealias StoryEntityMapper = (
     id: ItemId,
     fetchMode: FetchMode,
     rank: Int,
-    type: String,
+    type: ItemType,
     author: String?,
     time: Instant,
     dead: Boolean?,
@@ -136,4 +134,4 @@ internal typealias HnItemEntityMapper = (
     parent: ItemId?,
     poll: ItemId?,
     parts: ItemIdArray?,
-) -> HnRankedItem
+) -> RankedStory

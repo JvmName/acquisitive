@@ -1,4 +1,4 @@
-package dev.jvmname.acquisitive.repo
+package dev.jvmname.acquisitive.repo.story
 
 import androidx.paging.LoadType
 import androidx.paging.Pager
@@ -16,11 +16,11 @@ import java.io.IOException
 
 
 @Inject
-class HnItemPagerFactory(
-    private val mediatorFactory: HnItemMediator.Factory,
-    private val repo: HnItemRepository,
+class StoryPagerFactory(
+    private val mediatorFactory: ItemMediator.Factory,
+    private val repo: StoryRepository,
 ) {
-    operator fun invoke(mode: FetchMode): Pager<Int, HnRankedItem> {
+    operator fun invoke(mode: FetchMode): Pager<Int, RankedStory> {
         val psf = repo.pagingSource(mode)
         return Pager(
             config = PagingConfig(
@@ -36,15 +36,15 @@ class HnItemPagerFactory(
 }
 
 @Inject
-class HnItemMediator(
+class ItemMediator(
     @Assisted private val mode: FetchMode,
     @Assisted private val onInvalidate: () -> Unit,
-    private val repo: HnItemRepository,
-) : RemoteMediator<Int, HnRankedItem>() {
+    private val repo: StoryRepository,
+) : RemoteMediator<Int, RankedStory>() {
 
     @AssistedFactory
     fun interface Factory {
-        operator fun invoke(mode: FetchMode, onInvalidate: () -> Unit): HnItemMediator
+        operator fun invoke(mode: FetchMode, onInvalidate: () -> Unit): ItemMediator
     }
 
     //https://issuetracker.google.com/issues/391414839
@@ -55,7 +55,7 @@ class HnItemMediator(
 
     override suspend fun load(
         loadType: LoadType,
-        state: PagingState<Int, HnRankedItem>,
+        state: PagingState<Int, RankedStory>,
     ): MediatorResult {
         logcat { "load: $loadType" }
         val pageSize = state.config.pageSize

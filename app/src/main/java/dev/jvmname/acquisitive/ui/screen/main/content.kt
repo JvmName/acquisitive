@@ -1,5 +1,6 @@
 package dev.jvmname.acquisitive.ui.screen.main
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -82,40 +83,41 @@ import logcat.logcat
 
 private val CELL_HEIGHT = 75.dp
 
-@[Composable CircuitInject(MainListScreen::class, AppScope::class)]
-fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Modifier) {
+@[Composable CircuitInject(StoryListScreen::class, AppScope::class)]
+fun StoryListUi(state: StoryListScreen.StoryListState, modifier: Modifier = Modifier) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = { FetchModeSwitcher(state) }) { innerPadding ->
-
         PullToRefreshBox(
             modifier = modifier
                 .padding(top = 16.dp)
                 .padding(innerPadding),
             isRefreshing = state.isRefreshing,
-            onRefresh = { state.eventSink(MainListEvent.Refresh) }
+            onRefresh = { state.eventSink(StoryListEvent.Refresh) }
         ) {
-            when (state.pagedStories.loadState.refresh) {
-                is LoadState.Loading -> {
-                    logcat(LogPriority.WARN) { "loadState: Loading" }
-                    Progress(Modifier.padding(top = 16.dp))
-                }
+            AnimatedContent(state.pagedStories.loadState.refresh) { refreshState ->
+                when (refreshState) {
+                    is LoadState.Loading -> {
+                        logcat(LogPriority.WARN) { "loadState: Loading" }
+                        Progress(Modifier.padding(top = 16.dp))
+                    }
 
-                else -> {
-                    logcat(LogPriority.WARN) { "loadState: NotLoading" }
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        val paged = state.pagedStories
-                        items(
-                            count = paged.itemCount,
-                            key = paged.itemKey { it.id },
-                            itemContent = { index ->
-                                MainListItem(
-                                    modifier.animateItem(),
-                                    paged[index] ?: return@items,
-                                    state.eventSink
-                                )
-                            }
-                        )
+                    else -> {
+                        logcat(LogPriority.WARN) { "loadState: NotLoading" }
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            val paged = state.pagedStories
+                            items(
+                                count = paged.itemCount,
+                                key = paged.itemKey { it.id },
+                                itemContent = { index ->
+                                    StoryListItem(
+                                        modifier.animateItem(),
+                                        paged[index] ?: return@items,
+                                        state.eventSink
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -124,7 +126,7 @@ fun MainListContent(state: MainListScreen.MainListState, modifier: Modifier = Mo
 }
 
 @Composable
-private fun FetchModeSwitcher(state: MainListScreen.MainListState) {
+private fun FetchModeSwitcher(state: StoryListScreen.StoryListState) {
     val resources = LocalResources.current
     val entries = remember { FetchMode.entries }
     TopAppBar(
@@ -137,7 +139,7 @@ private fun FetchModeSwitcher(state: MainListScreen.MainListState) {
                 },
                 selectedIndex = entries.indexOf(state.fetchMode),
                 onItemSelected = { i, _ ->
-                    state.eventSink(MainListEvent.FetchModeChanged(entries[i]))
+                    state.eventSink(StoryListEvent.FetchModeChanged(entries[i]))
                 },
                 label = "Mode",
             )
@@ -162,18 +164,18 @@ private fun BoxScope.Progress(modifier: Modifier) {
 }
 
 @Composable
-fun MainListItem(
+fun StoryListItem(
     modifier: Modifier,
-    item: HnScreenItem,
-    eventSink: (MainListEvent) -> Unit,
+    story: HnScreenItem,
+    eventSink: (StoryListEvent) -> Unit,
 ) {
-    item as HnScreenItem.StoryItem
+    story as HnScreenItem.StoryItem
     OutlinedCard(modifier = modifier) {
         ConstraintLayout(
             modifier = modifier
                 .wrapContentHeight()
                 .fillMaxWidth()
-                .clickable { item.urlHost?.let { eventSink(MainListEvent.ItemClicked(item.id)) } }
+                .clickable { story.urlHost?.let { eventSink(StoryListEvent.StoryClicked(story.id)) } }
         ) {
             val (rankScoreBox, actionBox) = createRefs()
             val (title, urlHost, timeAuthor) = createRefs()
@@ -197,17 +199,17 @@ fun MainListItem(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    item.rank,
+                    story.rank,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    item.score.toString(),
+                    story.score.toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (item.isHot) MaterialTheme.colorScheme.hotColor else Color.Unspecified,
-                    fontWeight = if (item.isHot) FontWeight.SemiBold else LocalTextStyle.current.fontWeight
+                    color = if (story.isHot) MaterialTheme.colorScheme.hotColor else Color.Unspecified,
+                    fontWeight = if (story.isHot) FontWeight.SemiBold else LocalTextStyle.current.fontWeight
                 )
-                if (item.isHot) {
+                if (story.isHot) {
                     Icon(
                         Icons.Default.LocalFireDepartment,
                         "hot",
@@ -217,7 +219,7 @@ fun MainListItem(
             }
 
             Text(
-                buildTitleText(item),
+                buildTitleText(story),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
@@ -229,7 +231,7 @@ fun MainListItem(
                     }
             )
 
-            if (item.urlHost != null) {
+            if (story.urlHost != null) {
                 Row(
                     Modifier.constrainAs(urlHost) {
                         top.linkTo(title.bottom)
@@ -239,7 +241,7 @@ fun MainListItem(
                     },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    when (val favicon = item.favicon) {
+                    when (val favicon = story.favicon) {
                         is Favicon.Icon -> AsyncImage(
                             model = favicon.url,
                             contentDescription = "favicon",
@@ -257,7 +259,7 @@ fun MainListItem(
                     }
                     Spacer(Modifier.size(3.dp))
                     Text(
-                        item.urlHost, style = MaterialTheme.typography.labelSmall,
+                        story.urlHost, style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier,
                         textAlign = TextAlign.Start,
                         overflow = TextOverflow.Ellipsis
@@ -272,7 +274,7 @@ fun MainListItem(
             }
 
             Text(
-                text = item.authorInfo.let { (dead, author) ->
+                text = story.authorInfo.let { (dead, author) ->
                     rememberResolvedString(dead, rememberResolvedString(author))
                 },
                 style = MaterialTheme.typography.labelSmall,
@@ -294,16 +296,16 @@ fun MainListItem(
                 height = Dimension.wrapContent
                 width = Dimension.wrapContent
             }) {
-                if (!item.isDeleted && !item.isDead) {
+                if (!story.isDeleted && !story.isDead) {
                     IconButton(onClick = {
-                        eventSink(MainListEvent.FavoriteClick)
+                        eventSink(StoryListEvent.FavoriteClick)
                     }) {
                         Icon(Icons.Outlined.FavoriteBorder, "Favorite")
                     }
                 }
 
                 TextButton(
-                    onClick = { eventSink(MainListEvent.CommentsClick(item.id)) },
+                    onClick = { eventSink(StoryListEvent.CommentsClick(story.id)) },
                     colors = with(IconButtonDefaults.iconButtonColors()) {
                         ButtonColors(
                             containerColor = containerColor,
@@ -313,19 +315,19 @@ fun MainListItem(
                         )
                     },
                 ) {
-                    val icon = if (item.isHot) Icons.Outlined.LocalFireDepartment
+                    val icon = if (story.isHot) Icons.Outlined.LocalFireDepartment
                     else Icons.AutoMirrored.Outlined.Comment
 
                     val cachedColor = LocalContentColor.current
                     val hotColor = MaterialTheme.colorScheme.hotColor
                     CompositionLocalProvider(LocalContentColor.providesComputed {
-                        if (item.isHot) hotColor
+                        if (story.isHot) hotColor
                         else cachedColor
                     }) {
                         Icon(icon, "Comments")
-                        if (item.numChildren > 0) {
+                        if (story.numChildren > 0) {
                             Text(
-                                item.numChildren.toString(),
+                                story.numChildren.toString(),
                                 modifier = Modifier
                                     .padding(start = 2.dp)
                                     .width(33.dp)
@@ -354,9 +356,9 @@ private fun buildTitleText(item: HnScreenItem.StoryItem): String = remember {
 
 @Composable
 @ThemePreviews
-fun PreviewMainListItem() {
+fun PreviewStoryListItem() {
     AcquisitiveTheme {
-        MainListItem(
+        StoryListItem(
             Modifier,
             storyItem(1234),
             eventSink = {}
@@ -366,7 +368,7 @@ fun PreviewMainListItem() {
 
 @Composable
 @ThemePreviews
-fun PreviewMainList() {
+fun PreviewStoryList() {
     val paged = remember {
         val nl = LoadState.NotLoading(true)
         flowOf(
@@ -380,10 +382,10 @@ fun PreviewMainList() {
 
 
     val state = remember {
-        MainListScreen.MainListState(false, FetchMode.TOP, paged) {}
+        StoryListScreen.StoryListState(false, FetchMode.TOP, paged) {}
     }
     AcquisitiveTheme {
-        MainListContent(state)
+        StoryListUi(state)
     }
 }
 

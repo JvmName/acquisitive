@@ -12,7 +12,7 @@ import com.slack.circuit.foundation.rememberCircuitNavigator
 import com.slack.circuitx.android.rememberAndroidScreenAwareNavigator
 import com.slack.circuitx.gesturenavigation.GestureNavigationDecorationFactory
 import com.theapache64.rebugger.RebuggerConfig
-import dev.jvmname.acquisitive.ui.screen.main.MainListScreen
+import dev.jvmname.acquisitive.ui.screen.main.StoryListScreen
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
             CircuitCompositionLocals(graph.circuit) {
                 AcquisitiveTheme {
                     logcat { "***entered theme" }
-                    val backstack = rememberSaveableBackStack(root = MainListScreen())
+                    val backstack = rememberSaveableBackStack(root = StoryListScreen())
                     val navigator = rememberAndroidScreenAwareNavigator(
                         rememberCircuitNavigator(backstack), // Decorated navigator
                         this@MainActivity,

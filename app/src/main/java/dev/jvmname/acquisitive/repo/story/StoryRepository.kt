@@ -1,8 +1,8 @@
-package dev.jvmname.acquisitive.repo
+package dev.jvmname.acquisitive.repo.story
 
 import androidx.compose.ui.util.fastZip
 import androidx.paging.InvalidatingPagingSourceFactory
-import dev.jvmname.acquisitive.db.HnItemEntity
+import dev.jvmname.acquisitive.db.StoryEntity
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
@@ -15,13 +15,13 @@ import kotlinx.coroutines.withContext
 import kotlin.time.Instant
 
 @Inject
-class HnItemRepository(
+class StoryRepository(
     private val client: HnClient,
-    private val store: HnItemStore,
+    private val store: StoryStore,
 ) {
 
-    fun pagingSource(mode: FetchMode): InvalidatingPagingSourceFactory<Int, HnRankedItem> {
-        return store.pagingSource(mode, ::ExpandedEntityToRankedItem)
+    fun pagingSource(mode: FetchMode): InvalidatingPagingSourceFactory<Int, RankedStory> {
+        return store.pagingSource(mode, ::EntityToRankedStory)
     }
 
     suspend fun refresh(fetchMode: FetchMode, pageSize: Int): Boolean {
@@ -46,15 +46,15 @@ class HnItemRepository(
     }
 
     suspend fun getItem(mode: FetchMode, id: ItemId): HnItem {
-        return store.getItem(mode, id).toItem().item
+        return store.getItem(mode, id).toStory().item
     }
 }
 
-private fun ExpandedEntityToRankedItem(
+private fun EntityToRankedStory(
     id: ItemId,
     fetchMode: FetchMode,
     rank: Int,
-    type: String,
+    type: ItemType,
     author: String?,
     time: Instant,
     dead: Boolean?,
@@ -68,10 +68,8 @@ private fun ExpandedEntityToRankedItem(
     parent: ItemId?,
     poll: ItemId?,
     parts: ItemIdArray?,
-): HnRankedItem {
-    return HnItemEntity(
-        id, fetchMode, rank, type, author, time,
-        dead, deleted, kids, title, url, text,
-        score, descendants, parent, poll, parts
-    ).toItem()
-}
+) = StoryEntity(
+    id = id, fetchMode = fetchMode, rank = rank, type = type, author = author, time = time,
+    dead = dead, deleted = deleted, kids = kids, title = title, url = url, text = text,
+    score = score, descendants = descendants, parent = parent, poll = poll, parts = parts
+).toStory()
