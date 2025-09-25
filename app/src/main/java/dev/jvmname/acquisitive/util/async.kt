@@ -5,19 +5,19 @@ import androidx.compose.runtime.RememberObserver
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toLowerCase
+import androidx.compose.ui.util.fastMap
 import com.slack.circuit.retained.rememberRetained
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.flatMapMerge
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import logcat.asLog
 import logcat.logcat
 import java.io.IOException
@@ -27,16 +27,25 @@ import kotlin.time.Duration.Companion.seconds
 @Composable
 fun String.capitalize(): String = toLowerCase(Locale.current).capitalize(Locale.current)
 
+fun <I, O> Flow<List<I>>.mapList(transform: (I) -> O): Flow<List<O>> = map { it.fastMap(transform) }
 
 //https://androidstudygroup.slack.com/archives/C03MHQ3NU/p1666367020309989
 suspend fun <T, R> Collection<T>.fetchAsync(
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
     transform: suspend (T) -> R,
 ): List<R> {
-    return asFlow()
-        .flowOn(dispatcher + CoroutineName("fetchAsync"))
-        .flatMapMerge(concurrency = 32) { flow { emit(transform(it)) } }
-        .toList(ArrayList(size))
+
+    return coroutineScope {
+        map {
+            async(dispatcher) {
+                transform(it)
+            }
+        }.awaitAll()
+    }
+//    return asFlow()
+//        .flowOn(dispatcher + CoroutineName("fetchAsync"))
+//        .flatMapMerge(concurrency = 32) { flow { emit(transform(it)) } }
+//        .toList(ArrayList(size))
 }
 
 // https://stackoverflow.com/a/46890009

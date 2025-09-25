@@ -1,14 +1,11 @@
 package dev.jvmname.acquisitive.ui.screen.main
 
-import android.content.Intent
-import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.core.net.toUri
 import androidx.paging.cachedIn
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.map
@@ -16,11 +13,9 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
-import com.slack.circuitx.android.IntentScreen
 import com.theapache64.rebugger.Rebugger
-import dev.jvmname.acquisitive.network.model.FetchMode
-import dev.jvmname.acquisitive.network.model.HnItem
-import dev.jvmname.acquisitive.network.model.score
+import dev.jvmname.acquisitive.domain.IntentCreator
+import dev.jvmname.acquisitive.domain.StoryScreenItemConverter
 import dev.jvmname.acquisitive.network.model.url
 import dev.jvmname.acquisitive.repo.story.StoryPagerFactory
 import dev.jvmname.acquisitive.repo.story.StoryRepository
@@ -30,7 +25,6 @@ import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.FavoriteClick
 import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.FetchModeChanged
 import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.Refresh
 import dev.jvmname.acquisitive.ui.screen.main.StoryListEvent.StoryClicked
-import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
@@ -40,19 +34,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.datetime.DateTimePeriod
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.periodUntil
 import logcat.LogPriority
 import logcat.logcat
-import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
+
+private const val DEFAULT_WINDOW = 24
 
 @Suppress("NOTHING_TO_INLINE")
 @Inject
 class StoryListPresenter(
     private val pagingFactory: StoryPagerFactory,
     private val repo: StoryRepository,
+    private val converter: StoryScreenItemConverter,
+    private val intentCreator: IntentCreator,
     @Assisted private val screen: StoryListScreen,
     @Assisted private val navigator: Navigator,
 ) : Presenter<StoryListScreen.StoryListState> {
@@ -72,17 +66,7 @@ class StoryListPresenter(
             pagingFactory(fetchMode)
                 .flow
                 .mapLatest { data ->
-                    data.map { ranked ->
-                        val story = ranked.item
-                        story.toScreenItem(
-                            isHot = story.score >= fetchMode.hotThreshold,
-                            suffixIcon = story.prefixIcon(),
-                            rank = ranked.rank,
-                            time =story.time.periodUntil(Clock.System.now(), TimeZone.currentSystemDefault())
-                                .toAbbreviatedDuration(),
-                            urlHost = story.url?.let(::extractUrlHost)
-                        )
-                    }
+                    data.map { ranked -> converter(ranked, fetchMode) }
                 }
                 .cachedIn(presenterScope)
         }.collectAsLazyPagingItems(Dispatchers.IO)
@@ -117,58 +101,10 @@ class StoryListPresenter(
                 FavoriteClick -> TODO()
                 Refresh -> isRefreshing = true
                 is StoryClicked -> presenterScope.launch {
-                    val url = repo.getItem(fetchMode, event.id).url?.toUri() ?: return@launch
-                    navigator.goTo(IntentScreen(Intent(Intent.ACTION_VIEW, url)))
+                    val url = repo.getItem(fetchMode, event.id).url ?: return@launch
+                    navigator.goTo(intentCreator.view(url))
                 }
             }
-        }
-    }
-
-    private fun HnItem.prefixIcon() = when {
-        dead == true -> "☠️"
-        deleted == true -> "🗑️"
-        this is HnItem.Job -> "💼"
-        this is HnItem.Poll -> "🗳️"
-        else -> null
-    }
-
-
-    companion object {
-        private const val DEFAULT_WINDOW = 24
-
-        private const val HOT_THRESHOLD_HIGH = 900
-        private const val HOT_THRESHOLD_NORMAL = 300
-        private const val HOT_THRESHOLD_LOW = 30
-
-        @VisibleForTesting
-        internal val FetchMode.hotThreshold: Int
-            get() = when (this) {
-                FetchMode.BEST -> HOT_THRESHOLD_HIGH
-                FetchMode.NEW -> HOT_THRESHOLD_LOW
-                else -> HOT_THRESHOLD_NORMAL
-            }
-
-        @VisibleForTesting
-        internal fun DateTimePeriod.toAbbreviatedDuration(): String = when {
-            years > 0 -> "${years}y"
-            months > 0 -> "${months}mo"
-            days >= 7 -> "${days / 7}w"
-            days > 0 -> "${days}d"
-            hours > 0 -> "${hours}h"
-            minutes > 0 -> "${minutes}m"
-            seconds > 10 -> "${seconds}s"
-            else -> "<1s"
-        }
-
-        @VisibleForTesting
-        internal inline fun extractUrlHost(url: String): String = try {
-            if (url.isBlank()) ""
-            else url.toUri()
-                .host
-                .orEmpty()
-                .removePrefix("www.")
-        } catch (e: Exception) {
-            ""
         }
     }
 }

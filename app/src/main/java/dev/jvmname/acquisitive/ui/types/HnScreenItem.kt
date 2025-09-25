@@ -18,7 +18,7 @@ sealed interface HnScreenItem {
     val id: ItemId
 
     @[Poko Immutable]
-    class StoryItem(
+    class Story(
         override val id: ItemId,
         val title: String,
         val titleSuffix: String?,
@@ -35,7 +35,7 @@ sealed interface HnScreenItem {
     }
 
     @[Poko Immutable]
-    class CommentItem(
+    class Comment(
         override val id: ItemId,
         val text: String,
         val time: String,
@@ -52,7 +52,7 @@ fun HnItem.toScreenItem(
     urlHost: String?,
     suffixIcon: String? = null,
 ): HnScreenItem = when (this) {
-    is HnItem.Comment -> HnScreenItem.CommentItem(
+    is HnItem.Comment -> HnScreenItem.Comment(
         id = id,
         text = text.orEmpty(),
         time = time,
@@ -61,7 +61,7 @@ fun HnItem.toScreenItem(
         parent = parent
     )
 
-    else -> HnScreenItem.StoryItem(
+    else -> HnScreenItem.Story(
         id = id,
         title = getDisplayedTitle(),
         isHot = isHot,

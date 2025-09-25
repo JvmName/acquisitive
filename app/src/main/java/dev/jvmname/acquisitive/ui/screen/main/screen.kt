@@ -15,7 +15,7 @@ data class StoryListScreen(val fetchMode: FetchMode = FetchMode.TOP) : Screen {
     data class StoryListState(
         val isRefreshing: Boolean,
         val fetchMode: FetchMode,
-        val pagedStories: LazyPagingItems<HnScreenItem>,
+        val pagedStories: LazyPagingItems<HnScreenItem.Story>,
         val eventSink: (StoryListEvent) -> Unit,
     ) : CircuitUiState
 }

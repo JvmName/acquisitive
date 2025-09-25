@@ -169,7 +169,7 @@ fun StoryListItem(
     story: HnScreenItem,
     eventSink: (StoryListEvent) -> Unit,
 ) {
-    story as HnScreenItem.StoryItem
+    story as HnScreenItem.Story
     OutlinedCard(modifier = modifier) {
         ConstraintLayout(
             modifier = modifier
@@ -343,7 +343,7 @@ fun StoryListItem(
 }
 
 @Composable
-private fun buildTitleText(item: HnScreenItem.StoryItem): String = remember {
+private fun buildTitleText(item: HnScreenItem.Story): String = remember {
     val title = AnnotatedString.fromHtml(item.title)
     val icon = item.titleSuffix.orEmpty()
     //normally wouldn't be this fussy but everything here is inside a list-loop
@@ -389,7 +389,7 @@ fun PreviewStoryList() {
     }
 }
 
-private fun storyItem(id: Int): HnScreenItem = HnScreenItem.StoryItem(
+private fun storyItem(id: Int): HnScreenItem.Story = HnScreenItem.Story(
     id = ItemId(id),
     title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
     isHot = true,
