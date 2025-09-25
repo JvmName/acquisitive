@@ -33,7 +33,7 @@ abstract class HnClient {
     }
 
     abstract suspend fun getStories(mode: FetchMode): ItemIdArray
-    abstract suspend fun getChildren(item: HnItem): Pair<HnItem, List<HnItem>>
+    abstract suspend fun getChildren(itemId: ItemId): Pair<HnItem, List<HnItem>>
     abstract suspend fun getTopStories(): ItemIdArray
     abstract suspend fun getNewStories(): ItemIdArray
     abstract suspend fun getShowStories(): ItemIdArray
@@ -60,8 +60,10 @@ class RealHnClient(factory: NetworkComponent.RetrofitFactory) : HnClient() {
         }
     }
 
-    override suspend fun getChildren(item: HnItem): Pair<HnItem, List<HnItem>> {
-        return item to item.kids.orEmpty().fetchAsync { getItem(it) }
+    override suspend fun getChildren(itemId: ItemId): Pair<HnItem, List<HnItem>> {
+        val item = getItem(itemId)
+        val kids = item.kids.orEmpty().fetchAsync { getItem(it) }
+        return item to kids
     }
 
     override suspend fun getTopStories(): ItemIdArray {

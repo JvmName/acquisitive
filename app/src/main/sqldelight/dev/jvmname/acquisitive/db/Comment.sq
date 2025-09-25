@@ -1,0 +1,99 @@
+import dev.jvmname.acquisitive.network.model.ItemId;
+import dev.jvmname.acquisitive.util.ItemIdArray;
+import kotlin.Boolean;
+import kotlin.Int;
+import kotlin.time.Instant;
+
+CREATE TABLE IF NOT EXISTS CommentEntity (
+    id INTEGER AS ItemId NOT NULL PRIMARY KEY,
+    storyId INTEGER AS ItemId REFERENCES StoryEntity(id),
+    parent INTEGER AS ItemId NOT NULL,
+    author TEXT,
+    time INTEGER AS Instant NOT NULL,
+    dead INTEGER AS Boolean,
+    deleted INTEGER AS Boolean,
+    kids TEXT AS ItemIdArray,
+    text TEXT,
+    rank INTEGER AS Int NOT NULL ,
+    expanded INTEGER AS Boolean NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS Comment_parentId_rank ON CommentEntity(parent, rank);
+
+
+insertComment:
+INSERT OR REPLACE INTO CommentEntity VALUES ?;
+
+updateExpanded {
+UPDATE CommentEntity
+SET expanded = IIF(expanded, FALSE, TRUE)
+WHERE id = :id;
+
+SELECT 
+    expanded,
+    IIF(expanded, kids, NULL) AS 'children',
+    IIF(expanded AND kids IS NOT NULL,
+        (SELECT COUNT(*) FROM CommentEntity c WHERE INSTR(kids, c.id) > 0),
+        0
+    ) AS 'childrenCountInDb'
+FROM CommentEntity WHERE id = :id;
+}
+
+
+observeComments:
+WITH RECURSIVE ChildComments AS (
+    SELECT *, 0 AS depth, '' || printf('%03d', rank) AS sortOrder
+    FROM CommentEntity
+    WHERE storyId = :parentStoryId
+    UNION ALL
+    SELECT CommentEntity.*, ChildComments.depth + 1, ChildComments.sortOrder || '.' || printf('0%3d', ChildComments.rank) AS sortOrder
+    FROM CommentEntity
+    JOIN ChildComments ON (INSTR(CommentEntity.kids, ChildComments.id) > 0)
+    WHERE CommentEntity.expanded = TRUE
+)
+SELECT * FROM ChildComments
+ORDER BY sortOrder;
+
+deleteCommentsForParent:
+WITH RECURSIVE CommentsToDelete AS (
+    SELECT id
+    FROM CommentEntity
+    WHERE storyId = :parentStoryId
+    UNION ALL
+    SELECT CommentEntity.id
+    FROM CommentEntity
+    JOIN CommentsToDelete ON (INSTR(CommentEntity.kids, CommentsToDelete.id) > 0)
+)
+DELETE FROM CommentEntity
+WHERE id IN (SELECT id FROM CommentsToDelete);
+
+
+
+-- countPagingComments:
+-- WITH RECURSIVE comment_tree AS (
+--     SELECT id, parent, expanded
+--     FROM CommentEntity
+--     WHERE parent = :parentId
+--     UNION ALL
+--     SELECT c.id, c.parent, c.expanded -- Children of expanded comments only
+--     FROM CommentEntity c
+--     JOIN comment_tree ON c.parent = comment_tree.id
+--     WHERE comment_tree.expanded = 1
+-- )
+-- SELECT COUNT(*) FROM comment_tree;
+--
+--
+-- pagingComments:
+-- WITH RECURSIVE comment_tree AS (
+--     SELECT *, 0 AS depth, '' || printf('%03d', rank) AS sort_order
+--     FROM CommentEntity
+--     WHERE parent = :parentId
+--     UNION ALL
+--     SELECT CommentEntity.*, comment_tree.depth + 1, comment_tree.sort_order || '.' || printf('%03d', CommentEntity.rank) AS sort_order
+--     FROM CommentEntity
+--     JOIN comment_tree ON CommentEntity.parent = comment_tree.id
+--     WHERE comment_tree.expanded = 1
+-- )
+-- SELECT * FROM comment_tree
+-- ORDER BY sort_order
+-- LIMIT :limit OFFSET :offset
+-- ;
