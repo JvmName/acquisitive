@@ -3,17 +3,32 @@ package dev.jvmname.acquisitive.ui.screen.comments
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
+import dev.drewhamilton.poko.Poko
+import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.ItemId
+import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-data class CommentListScreen(val parentItemId: ItemId) : Screen {
-    data class CommentListState(
-        val parentItemId: ItemId,
-        val eventSink: (CommentListEvent) -> Unit,
-    ) : CircuitUiState
+data class CommentListScreen(val parentItemId: ItemId, val fetchMode: FetchMode) : Screen {
+
+    sealed interface CommentListState : CircuitUiState {
+        object Loading : CommentListState
+        data class Full(
+            val isRefreshing: Boolean,
+            val storyItem: HnScreenItem.Story,
+            val commentItems: List<HnScreenItem.Comment>,
+            val eventSink: (CommentListEvent) -> Unit,
+        ) : CommentListState
+    }
 }
 
 sealed class CommentListEvent : CircuitUiEvent {
+    object Refresh : CommentListEvent()
 
+    @Poko
+    class ExpandToggled(val id: ItemId) : CommentListEvent()
+
+    @Poko
+    class Share(val id: ItemId) : CommentListEvent()
 }
