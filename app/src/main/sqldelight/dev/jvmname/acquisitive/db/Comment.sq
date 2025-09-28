@@ -51,7 +51,7 @@ WITH RECURSIVE ChildComments AS (
     WHERE CommentEntity.expanded = TRUE
 )
 SELECT * FROM ChildComments
-ORDER BY sortOrder;
+ORDER BY parent, rank;
 
 deleteCommentsForParent:
 WITH RECURSIVE CommentsToDelete AS (

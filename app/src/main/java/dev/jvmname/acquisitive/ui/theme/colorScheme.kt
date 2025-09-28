@@ -89,9 +89,11 @@ val ColorScheme.hotColor: Color
     get() = Color(0xFFF19D38)
 
 @Composable
-fun ColorScheme.indent(level: Int): Color {
+fun ColorScheme.indent(level: Int): Color = indent(level, isSystemInDarkTheme())
+
+fun ColorScheme.indent(level: Int, isDark: Boolean): Color {
     val indent = level % 10
-    return if (!isSystemInDarkTheme()) {
+    return if (!isDark) {
         when (indent) {
             0 -> lightIndent0
             1 -> lightIndent1

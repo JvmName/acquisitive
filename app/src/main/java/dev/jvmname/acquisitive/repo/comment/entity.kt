@@ -2,7 +2,6 @@ package dev.jvmname.acquisitive.repo.comment
 
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.db.CommentEntity
-import dev.jvmname.acquisitive.db.ObserveComments
 import dev.jvmname.acquisitive.network.model.HnItem
 
 @Poko
@@ -26,21 +25,5 @@ fun HnItem.Comment.toEntity(rank: Int): CommentEntity {
         text = text,
         parent = parent,
         expanded = false
-    )
-}
-
-fun ObserveComments.toEntity(): CommentEntity {
-    return CommentEntity(
-        id = id,
-        storyId = storyId,
-        parent = parent,
-        author = author,
-        time = time,
-        dead = dead,
-        deleted = deleted,
-        kids = kids,
-        text = text,
-        rank = rank,
-        expanded = expanded,
     )
 }

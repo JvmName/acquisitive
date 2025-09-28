@@ -1,14 +1,21 @@
 package dev.jvmname.acquisitive.domain
 
 import androidx.annotation.VisibleForTesting
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Public
 import androidx.core.net.toUri
+import com.backbase.deferredresources.DeferredFormattedString
+import com.backbase.deferredresources.DeferredText
+import com.backbase.deferredresources.text.withFormatArgs
+import dev.jvmname.acquisitive.R
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
+import dev.jvmname.acquisitive.network.model.getDisplayedTitle
 import dev.jvmname.acquisitive.network.model.score
 import dev.jvmname.acquisitive.network.model.url
 import dev.jvmname.acquisitive.repo.story.RankedStory
+import dev.jvmname.acquisitive.ui.types.Favicon
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
-import dev.jvmname.acquisitive.ui.types.toScreenItem
 import dev.zacsweers.metro.Inject
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.TimeZone
@@ -21,23 +28,43 @@ class StoryScreenItemConverter() {
     operator fun invoke(ranked: RankedStory, fetchMode: FetchMode): HnScreenItem.Story {
         val story = ranked.item
         require(story !is HnItem.Comment) { "use CommentScreenItemConverter instead for ${story.id}" }
-        return story.toScreenItem(
+
+        val urlHost = story.url?.let(::extractUrlHost)
+        val time = story.time
+            .periodUntil(Clock.System.now(), TimeZone.currentSystemDefault())
+            .toAbbreviatedDuration()
+        return HnScreenItem.Story(
+            id = story.id,
+            title = story.getDisplayedTitle(),
             isHot = story.score >= fetchMode.hotThreshold,
-            suffixIcon = story.prefixIcon(),
-            rank = ranked.rank,
-            time = story.time.periodUntil(Clock.System.now(), TimeZone.currentSystemDefault())
-                .toAbbreviatedDuration(),
-            urlHost = story.url?.let(::extractUrlHost)
-        ) as HnScreenItem.Story
-    }
+            score = story.score,
+            rank = "${ranked.rank}.",
+            urlHost = urlHost,
+            favicon = when {
+                urlHost != null -> Favicon.Icon("https://icons.duckduckgo.com/ip3/$urlHost.ico")
+                else -> Favicon.Default(Icons.Default.Public)
+            },
+            numChildren = story.kids?.size ?: 0,
+            authorInfo = Pair(
+                first = if (story.dead == true) DeferredFormattedString.Resource(R.string.dead)
+                else DeferredFormattedString.Constant("%s"),
+                second = when {
+                    story.by != null -> DeferredFormattedString.Resource(R.string.time_author)
+                        .withFormatArgs(time, story.by!!)
 
-
-    private fun HnItem.prefixIcon() = when {
-        dead == true -> "☠️"
-        deleted == true -> "🗑️"
-        this is HnItem.Job -> "💼"
-        this is HnItem.Poll -> "🗳️"
-        else -> null
+                    else -> DeferredText.Constant(time)
+                }
+            ),
+            isDead = story.dead ?: false,
+            isDeleted = story.deleted ?: false,
+            titleSuffix = when {
+                story.dead == true -> "☠️"
+                story.deleted == true -> "🗑️"
+                story is HnItem.Job -> "💼"
+                story is HnItem.Poll -> "🗳️"
+                else -> null
+            }
+        )
     }
 
     companion object {
@@ -54,7 +81,6 @@ class StoryScreenItemConverter() {
                 else -> HOT_THRESHOLD_NORMAL
             }
 
-        @VisibleForTesting
         internal fun DateTimePeriod.toAbbreviatedDuration(): String = when {
             years > 0 -> "${years}y"
             months > 0 -> "${months}mo"
@@ -67,7 +93,7 @@ class StoryScreenItemConverter() {
         }
 
         @VisibleForTesting
-        internal inline fun extractUrlHost(url: String): String = try {
+        internal fun extractUrlHost(url: String): String = try {
             if (url.isBlank()) ""
             else url.toUri()
                 .host

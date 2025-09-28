@@ -11,7 +11,7 @@ value class ItemIdArray
 @PublishedApi internal constructor(@PublishedApi internal val storage: IntArray) :
     Collection<ItemId> {
 
-    constructor(size: Int) : this(IntArray(size))
+    constructor(size: Int) : this(IntArray(size = size))
 
     operator fun get(index: Int): ItemId = ItemId(storage[index])
     operator fun set(index: Int, value: ItemId) {
@@ -36,30 +36,17 @@ value class ItemIdArray
 
     override fun isEmpty(): Boolean = storage.isEmpty()
 
-    fun take(n: Int): ItemIdArray {
-        require(n >= 0) { "Requested element count $n is less than zero." }
-        return when (n) {
-            0 -> emptyItemIdArray()
-            1 -> itemIdArrayOf(first().id)
-            else -> {
-                val _storage = storage
-                ItemIdArray(minOf(n, size)) { i ->
-                    ItemId(_storage[i])
-                }
-            }
-        }
-    }
-
-    fun slice(indices: IntRange): ItemIdArray {
-        if (indices.isEmpty()) return emptyItemIdArray()
-        return ItemIdArray(storage.sliceArray(indices))
-    }
-
-
     inline fun forEach(action: (ItemId) -> Unit) {
         contract { callsInPlace(action) }
         for (index in indices) {
             action(get(index))
+        }
+    }
+
+    inline fun forEachIndexed(block: (index: Int, element: ItemId) -> Unit) {
+        contract { callsInPlace(block) }
+        for (i in indices) {
+            block(i, ItemId(storage[i]))
         }
     }
 

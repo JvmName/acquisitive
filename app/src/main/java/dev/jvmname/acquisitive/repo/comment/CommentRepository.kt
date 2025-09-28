@@ -1,10 +1,11 @@
 package dev.jvmname.acquisitive.repo.comment
 
-import dev.jvmname.acquisitive.db.CommentEntity
+import dev.jvmname.acquisitive.db.ObserveComments
 import dev.jvmname.acquisitive.network.HnClient
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.util.fetchAsync
+import dev.jvmname.acquisitive.util.mapList
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -23,8 +24,9 @@ class CommentRepository(
         }
     }
 
-    fun observeComments(parentStoryId: ItemId): Flow<List<CommentEntity>> {
+    fun observeComments(parentStoryId: ItemId): Flow<List<RankedComment>> {
         return store.observeComments(parentStoryId)
+            .mapList(ObserveComments::toRankedComment)
     }
 
     suspend fun toggleCommentExpanded(commentId: ItemId) = withContext(Dispatchers.IO) {
@@ -34,4 +36,22 @@ class CommentRepository(
             store.insertExpanded(commentId, true, children)
         }
     }
+}
+
+fun ObserveComments.toRankedComment(): RankedComment {
+    return RankedComment(
+        comment = HnItem.Comment(
+            id = id,
+            by = author,
+            time = time,
+            dead = dead,
+            deleted = deleted,
+            kids = kids,
+            text = text,
+            parent = parent,
+        ),
+        depth = depth.toInt(),
+        rank = rank,
+        expanded = expanded,
+    )
 }

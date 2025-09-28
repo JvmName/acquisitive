@@ -1,17 +1,13 @@
 package dev.jvmname.acquisitive.ui.types
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import com.backbase.deferredresources.DeferredFormattedString
 import com.backbase.deferredresources.DeferredText
-import com.backbase.deferredresources.text.withFormatArgs
 import dev.drewhamilton.poko.Poko
-import dev.jvmname.acquisitive.R
-import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
-import dev.jvmname.acquisitive.network.model.getDisplayedTitle
 
 @Immutable
 sealed interface HnScreenItem {
@@ -39,59 +35,14 @@ sealed interface HnScreenItem {
         override val id: ItemId,
         val text: String,
         val time: String,
-        val author: String,
+        val author: Pair<DeferredFormattedString, DeferredText>,
         val numChildren: Int,
         val parent: ItemId,
+        val indentDepth: Dp,
+        val indentColor: Color,
+        val expanded: Boolean,
+        val rank: Int,
     ) : HnScreenItem
-}
-
-fun HnItem.toScreenItem(
-    isHot: Boolean,
-    time: String,
-    rank: Int,
-    urlHost: String?,
-    suffixIcon: String? = null,
-): HnScreenItem = when (this) {
-    is HnItem.Comment -> HnScreenItem.Comment(
-        id = id,
-        text = text.orEmpty(),
-        time = time,
-        author = by.orEmpty(),
-        numChildren = kids?.size ?: 0,
-        parent = parent
-    )
-
-    else -> HnScreenItem.Story(
-        id = id,
-        title = getDisplayedTitle(),
-        isHot = isHot,
-        score = when (this) {
-            is HnItem.Story -> score
-            is HnItem.Job -> score
-            is HnItem.Poll -> score
-            is HnItem.PollOption -> score
-            else -> 0
-        },
-        rank = "$rank.",
-        urlHost = urlHost,
-        favicon = if (urlHost != null) {
-            Favicon.Icon("https://icons.duckduckgo.com/ip3/$urlHost.ico")
-        } else Favicon.Default(Icons.Default.Public),
-        numChildren = kids?.size ?: 0,
-        authorInfo = Pair(
-            first = if (dead == true) DeferredFormattedString.Resource(R.string.dead)
-            else DeferredFormattedString.Constant("%s"),
-            second = when {
-                by != null -> DeferredFormattedString.Resource(R.string.time_author)
-                    .withFormatArgs(time, by!!)
-
-                else -> DeferredText.Constant(time)
-            }
-        ),
-        isDead = dead ?: false,
-        isDeleted = deleted ?: false,
-        titleSuffix = suffixIcon
-    )
 }
 
 @Immutable

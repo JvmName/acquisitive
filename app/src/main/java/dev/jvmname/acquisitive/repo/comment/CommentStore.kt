@@ -4,12 +4,11 @@ import androidx.compose.ui.util.fastForEachIndexed
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import dev.jvmname.acquisitive.db.CommentEntity
 import dev.jvmname.acquisitive.db.CommentQueries
+import dev.jvmname.acquisitive.db.ObserveComments
 import dev.jvmname.acquisitive.db.UpdateExpanded
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.ItemId
-import dev.jvmname.acquisitive.util.mapList
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -20,11 +19,10 @@ class CommentStore(private val db: CommentQueries) {
         deletePreviousAndInsert(parentId, topLevelComments)
     }
 
-    fun observeComments(parentId: ItemId): Flow<List<CommentEntity>> {
+    fun observeComments(parentId: ItemId): Flow<List<ObserveComments>> {
         return db.observeComments(parentId)
             .asFlow()
             .mapToList(Dispatchers.IO)
-            .mapList { it.toEntity() }
     }
 
     suspend fun updateExpanded(id: ItemId): UpdateExpanded {
