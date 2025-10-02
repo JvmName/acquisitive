@@ -30,5 +30,5 @@ sealed class StoryListEvent : CircuitUiEvent {
     @Poko
     class CommentsClick(val id: ItemId) : StoryListEvent()
     data object FavoriteClick : StoryListEvent()
-    object Refresh : StoryListEvent()
+    data object Refresh : StoryListEvent()
 }

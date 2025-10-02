@@ -5,17 +5,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Public
 import androidx.core.net.toUri
 import com.backbase.deferredresources.DeferredFormattedString
-import com.backbase.deferredresources.DeferredText
 import com.backbase.deferredresources.text.withFormatArgs
 import dev.jvmname.acquisitive.R
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
+import dev.jvmname.acquisitive.network.model.descendants
 import dev.jvmname.acquisitive.network.model.getDisplayedTitle
 import dev.jvmname.acquisitive.network.model.score
 import dev.jvmname.acquisitive.network.model.url
 import dev.jvmname.acquisitive.repo.story.RankedStory
 import dev.jvmname.acquisitive.ui.types.Favicon
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
+import dev.jvmname.acquisitive.util.withMultiFormatArgs
 import dev.zacsweers.metro.Inject
 import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.TimeZone
@@ -29,34 +30,37 @@ class StoryScreenItemConverter() {
         val story = ranked.item
         require(story !is HnItem.Comment) { "use CommentScreenItemConverter instead for ${story.id}" }
 
-        val urlHost = story.url?.let(::extractUrlHost)
         val time = story.time
             .periodUntil(Clock.System.now(), TimeZone.currentSystemDefault())
             .toAbbreviatedDuration()
+
+        val author = DeferredFormattedString.Resource(R.string.time_author)
+            .withFormatArgs(time, story.by.orEmpty())
+        val authorInfo = if (story.dead == true) {
+            DeferredFormattedString.Resource(R.string.dead)
+                .withMultiFormatArgs(author)
+        } else {
+            author
+        }
+
+        val urlHost = story.url?.let(::extractUrlHost)
+
         return HnScreenItem.Story(
             id = story.id,
             title = story.getDisplayedTitle(),
             isHot = story.score >= fetchMode.hotThreshold,
-            score = story.score,
+            score = story.score.toString(),
             rank = "${ranked.rank}.",
             urlHost = urlHost,
             favicon = when {
                 urlHost != null -> Favicon.Icon("https://icons.duckduckgo.com/ip3/$urlHost.ico")
                 else -> Favicon.Default(Icons.Default.Public)
             },
-            numChildren = story.kids?.size ?: 0,
-            authorInfo = Pair(
-                first = if (story.dead == true) DeferredFormattedString.Resource(R.string.dead)
-                else DeferredFormattedString.Constant("%s"),
-                second = when {
-                    story.by != null -> DeferredFormattedString.Resource(R.string.time_author)
-                        .withFormatArgs(time, story.by!!)
-
-                    else -> DeferredText.Constant(time)
-                }
-            ),
-            isDead = story.dead ?: false,
+            numChildren = story.descendants ?: 0,
+            author = authorInfo,
+            time = time,
             isDeleted = story.deleted ?: false,
+            isDead = story.dead ?: false,
             titleSuffix = when {
                 story.dead == true -> "☠️"
                 story.deleted == true -> "🗑️"

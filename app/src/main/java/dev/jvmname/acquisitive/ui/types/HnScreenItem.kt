@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
-import com.backbase.deferredresources.DeferredFormattedString
 import com.backbase.deferredresources.DeferredText
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.network.model.ItemId
@@ -13,16 +12,17 @@ import dev.jvmname.acquisitive.network.model.ItemId
 sealed interface HnScreenItem {
     val id: ItemId
 
-    @[Poko Immutable]
+    @Poko
     class Story(
         override val id: ItemId,
         val title: String,
         val titleSuffix: String?,
         val isHot: Boolean,
-        val score: Int,
+        val score: String,
         val rank: String,
         val numChildren: Int,
-        val authorInfo: Pair<DeferredFormattedString, DeferredText>,
+        val author: DeferredText,
+        val time: String,
         val urlHost: String?,
         val favicon: Favicon,
         val isDead: Boolean,
@@ -30,12 +30,12 @@ sealed interface HnScreenItem {
     ) : HnScreenItem {
     }
 
-    @[Poko Immutable]
+    @Poko
     class Comment(
         override val id: ItemId,
         val text: String,
         val time: String,
-        val author: Pair<DeferredFormattedString, DeferredText>,
+        val author: DeferredText,
         val numChildren: Int,
         val parent: ItemId,
         val indentDepth: Dp,

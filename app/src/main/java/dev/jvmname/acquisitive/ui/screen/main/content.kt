@@ -15,12 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Comment
 import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material3.ButtonColors
@@ -44,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -62,9 +59,6 @@ import androidx.paging.LoadStates
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import app.cash.paging.PagingData
-import coil3.compose.AsyncImage
-import com.backbase.deferredresources.DeferredFormattedString
-import com.backbase.deferredresources.DeferredText
 import com.backbase.deferredresources.compose.rememberResolvedString
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.acquisitive.R
@@ -73,9 +67,7 @@ import dev.jvmname.acquisitive.dev.previewStoryItem
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.ui.common.Favicon
 import dev.jvmname.acquisitive.ui.common.LargeDropdownMenu
-import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
-import dev.jvmname.acquisitive.ui.types.Favicon
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import dev.jvmname.acquisitive.util.capitalize
 import dev.zacsweers.metro.AppScope
@@ -206,7 +198,7 @@ fun StoryListItem(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    story.score.toString(),
+                    story.score,
                     style = MaterialTheme.typography.labelSmall,
                     color = if (story.isHot) MaterialTheme.colorScheme.hotColor else Color.Unspecified,
                     fontWeight = if (story.isHot) FontWeight.SemiBold else LocalTextStyle.current.fontWeight
@@ -261,9 +253,7 @@ fun StoryListItem(
             }
 
             Text(
-                text = story.authorInfo.let { (dead, author) ->
-                    rememberResolvedString(dead, rememberResolvedString(author))
-                },
+                text = rememberResolvedString(story.author),
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.constrainAs(timeAuthor) {
                     top.linkTo(urlHost.bottom)
@@ -330,15 +320,17 @@ fun StoryListItem(
 }
 
 @Composable
-private fun buildTitleText(item: HnScreenItem.Story): String = remember {
+private fun buildTitleText(item: HnScreenItem.Story): AnnotatedString = remember {
     val title = AnnotatedString.fromHtml(item.title)
     val icon = item.titleSuffix.orEmpty()
     //normally wouldn't be this fussy but everything here is inside a list-loop
-    return@remember buildString(title.length + 1 + icon.length) {
-        append(title)
-        append(" ")
-        append(icon)
-    }
+    AnnotatedString.Builder(title.length + 1 + icon.length)
+        .apply {
+            append(title)
+            append(" ")
+            append(icon)
+        }
+        .toAnnotatedString()
 }
 
 @Composable

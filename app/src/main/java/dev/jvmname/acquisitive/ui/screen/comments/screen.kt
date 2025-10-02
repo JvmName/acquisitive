@@ -24,11 +24,13 @@ data class CommentListScreen(val parentItemId: ItemId, val fetchMode: FetchMode)
 }
 
 sealed class CommentListEvent : CircuitUiEvent {
-    object Refresh : CommentListEvent()
+    data object Refresh : CommentListEvent()
 
     @Poko
     class ExpandToggled(val id: ItemId) : CommentListEvent()
 
     @Poko
     class Share(val id: ItemId) : CommentListEvent()
+
+    data object StoryClicked : CommentListEvent()
 }

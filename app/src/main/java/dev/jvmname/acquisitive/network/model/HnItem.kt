@@ -93,6 +93,13 @@ sealed interface HnItem {
     ) : HnItem
 }
 
+val HnItem.descendants: Int?
+    get() = when (this) {
+        is HnItem.Poll -> descendants
+        is HnItem.Story -> descendants
+        else -> null
+    }
+
 val HnItem.score: Int
     get() = when (this) {
         is HnItem.Comment -> 0

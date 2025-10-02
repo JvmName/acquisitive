@@ -62,34 +62,126 @@ import dev.jvmname.acquisitive.ui.types.Favicon
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import dev.zacsweers.metro.AppScope
 
-@Stable
-class ChildFetcher(private val map: CommentMap<HnScreenItem.Comment>) :
-        (ItemId) -> List<HnScreenItem.Comment> {
-    override fun invoke(id: ItemId): List<HnScreenItem.Comment> = map[id] ?: emptyList()
-}
-
 @[Composable CircuitInject(CommentListScreen::class, AppScope::class)]
-fun CommentListContent(state: CommentListScreen.CommentListState, modifier: Modifier) {
-    TODO()
-}
-
-@Composable
-fun StoryCard(modifier: Modifier = Modifier, story: HnScreenItem.Story) {
-
-}
-
-@Composable
-fun CommentList(
-    modifier: Modifier = Modifier,
-    comments: List<HnScreenItem.Comment>,
-    onToggleExpand: (ItemId) -> Unit,
-) {
-    LazyColumn(modifier = modifier.background(MaterialTheme.colorScheme.background)) {
-        items(
-            items = comments,
-            key = { it.id },
+fun CommentListContent(contentState: CommentListState, modifier: Modifier) {
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {},
+    ) { paddingValues ->
+        PullToRefreshBox(
+            modifier = modifier
+                .padding(top = 16.dp)
+                .padding(paddingValues),
+            isRefreshing = contentState is CommentListState.Loading,
+            onRefresh = {
+                if (contentState !is CommentListState.Full) return@PullToRefreshBox
+                contentState.eventSink(CommentListEvent.Refresh)
+            }
         ) {
-            CommentItem(comment = it, onToggleExpand = onToggleExpand)
+            AnimatedContent(contentState) { state ->
+                LazyColumn(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background)
+                        .fillMaxSize()
+                ) {
+                    when (state) {
+                        is CommentListState.Loading -> {
+                            item(key = 1, contentType = { "loading" }) {
+                                Box {
+                                    Progress(Modifier.padding(top = 16.dp))
+                                }
+                            }
+                        }
+
+                        is CommentListState.Full -> {
+                            val story = state.storyItem
+                            val comments = state.commentItems
+                            item(
+                                key = story.id,
+                                contentType = { "story" }) {
+                                StoryCardItem(
+                                    story = story,
+                                    onStoryClick = { state.eventSink(CommentListEvent.StoryClicked) }
+                                )
+                            }
+                            items(
+                                items = comments,
+                                contentType = { "comments" },
+                                key = { it.id },
+                            ) {
+                                CommentItem(
+                                    comment = it,
+                                    onToggleExpand = {
+                                        state.eventSink(CommentListEvent.ExpandToggled(it))
+                                    })
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+@Composable
+private fun BoxScope.Progress(modifier: Modifier) {
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .align(Alignment.Center)
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier
+                .padding(vertical = 24.dp)
+                .align(Alignment.CenterHorizontally),
+            color = MaterialTheme.colorScheme.secondary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+    }
+}
+
+
+@Composable
+fun StoryCardItem(
+    modifier: Modifier = Modifier,
+    story: HnScreenItem.Story,
+    onStoryClick: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        shape = CutCornerShape(topEnd = 12.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight(),
+        onClick = onStoryClick,
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, 8.dp)) {
+            Text(
+                text = story.title, style = Typography.headlineMedium
+            )
+
+            if (story.urlHost != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Favicon(story)
+                    Spacer(Modifier.size(3.dp))
+                    Text(
+                        text = story.urlHost, style = Typography.labelSmall
+                    )
+                }
+            }
+            Spacer(Modifier.size(4.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconText(icon = Icons.Outlined.ThumbUp, text = story.score)
+                IconText(
+                    icon = Icons.AutoMirrored.Outlined.Comment, text = story.numChildren.toString()
+                )
+                IconText(icon = Icons.Outlined.AccessTime, text = story.time)
+                IconText(icon = Icons.Outlined.AccountCircle, text = rememberResolvedString(story.author).substringAfter('•').trim()) //laziness
+            }
         }
     }
 }
@@ -106,14 +198,12 @@ fun CommentItem(
                 if (comment.numChildren == 0) return@clickable
                 onToggleExpand(comment.id)
             }
-            .padding(horizontal = 16.dp, vertical = 5.dp),
-        badge = {
+            .padding(horizontal = 16.dp, vertical = 5.dp), badge = {
             if (comment.numChildren == 0 || comment.expanded) return@BadgedBox
             Badge(containerColor = comment.indentColor) {
                 Text(text = "+${comment.numChildren}")
             }
-        }
-    ) {
+        }) {
         Row(modifier = Modifier.height(IntrinsicSize.Max)) {
             VerticalDivider(
                 modifier = Modifier
@@ -124,7 +214,9 @@ fun CommentItem(
             )
             Card(
 //                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
                 shape = CutCornerShape(topEnd = 12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -138,24 +230,19 @@ fun CommentItem(
                         horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.Start)
                     ) {
                         Text(
-                            text = comment.author.let { (dead, author) ->
-                                rememberResolvedString(
-                                    dead,
-                                    rememberResolvedString(author)
-                                )
-                            },
-                            style = MaterialTheme.typography.labelSmall,
+                            text = rememberResolvedString(comment.author),
+                            style = Typography.labelSmall,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
                             text = comment.time,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = Typography.labelSmall,
                         )
                     }
 
                     Text(
-                        text = comment.text,
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = AnnotatedString.fromHtml(comment.text),
+                        style = Typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp)
                     ) //todo html / markdown
                 }
