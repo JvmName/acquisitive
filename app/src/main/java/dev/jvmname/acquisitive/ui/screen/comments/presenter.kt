@@ -96,6 +96,14 @@ class CommentListPresenter(
                         )
                         navigator.goTo(intent)
                     }
+
+                    CommentListEvent.StoryClicked ->presenterScope.launch {
+                        val url = storyItem?.id
+                            ?.let { storyRepo.getItem(screen.fetchMode, it) }
+                            ?.url
+                            ?: return@launch
+                        navigator.goTo(intentCreator.view(url))
+                    }
                 }
             }
         )

@@ -6,7 +6,6 @@ import kotlin.time.Instant;
 
 CREATE TABLE IF NOT EXISTS CommentEntity (
     id INTEGER AS ItemId NOT NULL PRIMARY KEY,
-    storyId INTEGER AS ItemId REFERENCES StoryEntity(id),
     parent INTEGER AS ItemId NOT NULL,
     author TEXT,
     time INTEGER AS Instant NOT NULL,
@@ -25,7 +24,11 @@ INSERT OR REPLACE INTO CommentEntity VALUES ?;
 
 updateExpanded {
 UPDATE CommentEntity
-SET expanded = IIF(expanded, FALSE, TRUE)
+SET expanded =
+    CASE
+        WHEN :expanded IS NOT NULL THEN :expanded
+        ELSE IIF(expanded, FALSE, TRUE)
+    END
 WHERE id = :id;
 
 SELECT 
@@ -38,30 +41,30 @@ SELECT
 FROM CommentEntity WHERE id = :id;
 }
 
-
 observeComments:
 WITH RECURSIVE ChildComments AS (
     SELECT *, 0 AS depth, '' || printf('%03d', rank) AS sortOrder
     FROM CommentEntity
-    WHERE storyId = :parentStoryId
+    WHERE parent = :parentStoryId
     UNION ALL
-    SELECT CommentEntity.*, ChildComments.depth + 1, ChildComments.sortOrder || '.' || printf('0%3d', ChildComments.rank) AS sortOrder
+    SELECT CommentEntity.*, (ChildComments.depth + 1) AS depth, (ChildComments.sortOrder || '.' || printf('%03d', CommentEntity.rank)) AS sortOrder
     FROM CommentEntity
-    JOIN ChildComments ON (INSTR(CommentEntity.kids, ChildComments.id) > 0)
-    WHERE CommentEntity.expanded = TRUE
+    JOIN ChildComments ON CommentEntity.parent = ChildComments.id
+    WHERE ChildComments.depth = 0
+        OR CommentEntity.expanded = TRUE
 )
 SELECT * FROM ChildComments
-ORDER BY parent, rank;
+ORDER BY sortOrder, rank;
 
 deleteCommentsForParent:
 WITH RECURSIVE CommentsToDelete AS (
     SELECT id
     FROM CommentEntity
-    WHERE storyId = :parentStoryId
+    WHERE parent = :parentStoryId
     UNION ALL
     SELECT CommentEntity.id
     FROM CommentEntity
-    JOIN CommentsToDelete ON (INSTR(CommentEntity.kids, CommentsToDelete.id) > 0)
+    JOIN CommentsToDelete ON CommentEntity.parent = CommentsToDelete.id
 )
 DELETE FROM CommentEntity
 WHERE id IN (SELECT id FROM CommentsToDelete);

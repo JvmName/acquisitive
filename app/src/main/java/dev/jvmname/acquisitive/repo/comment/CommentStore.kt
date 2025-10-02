@@ -1,9 +1,11 @@
 package dev.jvmname.acquisitive.repo.comment
 
+import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import dev.jvmname.acquisitive.db.CommentEntity
 import dev.jvmname.acquisitive.db.CommentQueries
 import dev.jvmname.acquisitive.db.ObserveComments
 import dev.jvmname.acquisitive.db.UpdateExpanded
@@ -12,21 +14,32 @@ import dev.jvmname.acquisitive.network.model.ItemId
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlin.collections.isNotEmpty
 
 @Inject
 class CommentStore(private val db: CommentQueries) {
-    fun refresh(parentId: ItemId, topLevelComments: List<HnItem.Comment>) {
-        deletePreviousAndInsert(parentId, topLevelComments)
+    fun refresh(
+        parent: Pair<HnItem?, CommentEntity?>,
+        children: List<CommentEntity>,
+    ) = db.transaction {
+        require((parent.first != null) xor (parent.second != null)) { "either HnItem or CommentEntity must be non-null" }
+        when {
+            parent.first != null -> db.deleteCommentsForParent(parent.first!!.id)
+            parent.second != null -> db.insertComment(parent.second!!)
+        }
+        children.fastForEach {
+            db.insertComment(it)
+        }
     }
 
     fun observeComments(parentId: ItemId): Flow<List<ObserveComments>> {
-        return db.observeComments(parentId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
+        return db.observeComments(parentId).asFlow().mapToList(Dispatchers.IO)
     }
 
-    suspend fun updateExpanded(id: ItemId): UpdateExpanded {
-        return db.updateExpanded(id = id).awaitAsOne()
+    suspend fun updateExpanded(id: ItemId, overrideExpanded: Boolean? = null): UpdateExpanded {
+        return db.updateExpanded(
+            id = id, expanded = overrideExpanded?.let { if (it) 1 else 0 }
+        ).awaitAsOne()
     }
 
     fun insertExpanded(
@@ -34,18 +47,13 @@ class CommentStore(private val db: CommentQueries) {
         expanded: Boolean,
         children: List<HnItem.Comment>,
     ) {
-        if (expanded) {
-            deletePreviousAndInsert(parentCommentId, children)
-        }
-    }
-
-    private fun deletePreviousAndInsert(
-        parentId: ItemId,
-        topLevelComments: List<HnItem.Comment>,
-    ) {
+        if (!expanded) return
         db.transaction {
-            db.deleteCommentsForParent(parentId)
-            topLevelComments.fastForEachIndexed { i, item ->
+            db.deleteCommentsForParent(parentCommentId)
+            db.updateExpanded(
+                id = parentCommentId, expanded = if (expanded) 1 else 0
+            ).executeAsOne()
+            children.fastForEachIndexed { i, item ->
                 db.insertComment(item.toEntity(i))
             }
         }
