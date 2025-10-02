@@ -16,6 +16,7 @@ import com.slack.circuit.runtime.presenter.Presenter
 import dev.jvmname.acquisitive.domain.CommentScreenItemConverter
 import dev.jvmname.acquisitive.domain.IntentCreator
 import dev.jvmname.acquisitive.domain.StoryScreenItemConverter
+import dev.jvmname.acquisitive.network.model.url
 import dev.jvmname.acquisitive.repo.comment.CommentRepository
 import dev.jvmname.acquisitive.repo.story.RankedStory
 import dev.jvmname.acquisitive.repo.story.StoryRepository
@@ -26,12 +27,12 @@ import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
-import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
-@Inject
+@AssistedInject
 class CommentListPresenter(
     private val repo: CommentRepository,
     private val storyRepo: StoryRepository,

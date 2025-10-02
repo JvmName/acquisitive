@@ -1,11 +1,12 @@
 package dev.jvmname.acquisitive.repo.story
 
+import androidx.compose.runtime.Immutable
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.db.StoryEntity
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 
-@Poko
+@[Poko Immutable]
 class RankedStory(val item: HnItem, val rank: Int)
 
 enum class ItemType { STORY, COMMENT, JOB, POLL, POLLOPTION, }

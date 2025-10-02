@@ -1,10 +1,11 @@
 package dev.jvmname.acquisitive.repo.comment
 
+import androidx.compose.runtime.Immutable
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.db.CommentEntity
 import dev.jvmname.acquisitive.network.model.HnItem
 
-@Poko
+@[Poko Immutable]
 class RankedComment(
     val comment: HnItem.Comment,
     val depth: Int,
@@ -12,10 +13,12 @@ class RankedComment(
     val expanded: Boolean,
 )
 
-fun HnItem.Comment.toEntity(rank: Int): CommentEntity {
+fun HnItem.Comment.toEntity(
+    rank: Int,
+    expanded: Boolean = false,
+): CommentEntity {
     return CommentEntity(
         id = id,
-        storyId = id,
         rank = rank,
         author = by,
         time = time,
@@ -24,6 +27,6 @@ fun HnItem.Comment.toEntity(rank: Int): CommentEntity {
         kids = kids,
         text = text,
         parent = parent,
-        expanded = false
+        expanded = expanded
     )
 }

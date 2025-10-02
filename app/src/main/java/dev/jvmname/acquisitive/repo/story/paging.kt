@@ -8,6 +8,7 @@ import app.cash.paging.RemoteMediator
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.AssistedInject
 import dev.zacsweers.metro.Inject
 import logcat.asLog
 import logcat.logcat
@@ -35,7 +36,7 @@ class StoryPagerFactory(
     }
 }
 
-@Inject
+@AssistedInject
 class ItemMediator(
     @Assisted private val mode: FetchMode,
     @Assisted private val onInvalidate: () -> Unit,

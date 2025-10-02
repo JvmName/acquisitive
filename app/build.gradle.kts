@@ -97,9 +97,6 @@ android {
         targetCompatibility = libs.versions.jvmTarget.map(JavaVersion::toVersion).get()
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlinOptions {
-        jvmTarget = libs.versions.jvmTarget.get()
-    }
     buildFeatures {
         compose = true
     }

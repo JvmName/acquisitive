@@ -29,7 +29,7 @@ import dev.jvmname.acquisitive.util.rememberRetainedCoroutineScope
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
-import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
@@ -41,7 +41,7 @@ import kotlin.time.Duration.Companion.seconds
 private const val DEFAULT_WINDOW = 24
 
 @Suppress("NOTHING_TO_INLINE")
-@Inject
+@AssistedInject
 class StoryListPresenter(
     private val pagingFactory: StoryPagerFactory,
     private val repo: StoryRepository,

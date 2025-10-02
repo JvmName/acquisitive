@@ -1,27 +1,27 @@
 [versions]
-activityCompose = "1.10.1"
-agp = "8.12.1"
+activityCompose = "1.11.0"
+agp = "8.13.0"
 circuit = "0.30.0"
 coil = "3.3.0"
-composeBom = "2025.08.01"
+composeBom = "2025.09.01"
 constraintlayout = "1.1.1"
 coreKtx = "1.17.0"
 jvmTarget = "21"
-kotlin = "2.2.10"
+kotlin = "2.2.20"
 kotlinx-coroutines = "1.10.2"
 sqldelight = "2.1.0"
 moshi = "1.15.2"
-moshiX = "0.31.0"
+moshiX = "0.32.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-buildConfig = { id = "com.github.gmazzo.buildconfig", version = "5.6.7" }
+buildConfig = { id = "com.github.gmazzo.buildconfig", version = "5.6.8" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version = "2.2.10-2.0.2" }
+ksp = { id = "com.google.devtools.ksp", version = "2.2.20-2.0.2" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
-poko = "dev.drewhamilton.poko:0.19.3"
-metro = "dev.zacsweers.metro:0.6.4"
+poko = "dev.drewhamilton.poko:0.20.0"
+metro = "dev.zacsweers.metro:0.6.8"
 
 [libraries]
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayout" }
