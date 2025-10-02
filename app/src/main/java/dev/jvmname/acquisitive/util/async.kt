@@ -2,9 +2,6 @@ package dev.jvmname.acquisitive.util
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.RememberObserver
-import androidx.compose.ui.text.capitalize
-import androidx.compose.ui.text.intl.Locale
-import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.util.fastMap
 import com.slack.circuit.retained.rememberRetained
 import kotlinx.coroutines.CoroutineDispatcher
@@ -23,9 +20,6 @@ import logcat.logcat
 import java.io.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-
-@Composable
-fun String.capitalize(): String = toLowerCase(Locale.current).capitalize(Locale.current)
 
 fun <I, O> Flow<List<I>>.mapList(transform: (I) -> O): Flow<List<O>> = map { it.fastMap(transform) }
 

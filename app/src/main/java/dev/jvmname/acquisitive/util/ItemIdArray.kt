@@ -2,11 +2,12 @@
 
 package dev.jvmname.acquisitive.util
 
+import androidx.compose.runtime.Stable
 import com.squareup.moshi.JsonClass
 import dev.jvmname.acquisitive.network.model.ItemId
 import kotlin.contracts.contract
 
-@[JvmInline JsonClass(generateAdapter = false)]
+@[JvmInline JsonClass(generateAdapter = false) Stable]
 value class ItemIdArray
 @PublishedApi internal constructor(@PublishedApi internal val storage: IntArray) :
     Collection<ItemId> {

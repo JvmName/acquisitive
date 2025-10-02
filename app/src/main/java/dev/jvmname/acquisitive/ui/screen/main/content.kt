@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMap
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -67,9 +68,10 @@ import com.backbase.deferredresources.DeferredText
 import com.backbase.deferredresources.compose.rememberResolvedString
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.acquisitive.R
+import dev.jvmname.acquisitive.dev.AcqPreview
+import dev.jvmname.acquisitive.dev.previewStoryItem
 import dev.jvmname.acquisitive.network.model.FetchMode
-import dev.jvmname.acquisitive.network.model.ItemId
-import dev.jvmname.acquisitive.ui.ThemePreviews
+import dev.jvmname.acquisitive.ui.common.Favicon
 import dev.jvmname.acquisitive.ui.common.LargeDropdownMenu
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
@@ -241,22 +243,7 @@ fun StoryListItem(
                     },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    when (val favicon = story.favicon) {
-                        is Favicon.Icon -> AsyncImage(
-                            model = favicon.url,
-                            contentDescription = "favicon",
-                            modifier = Modifier
-                                .size(12.dp)
-                                .clip(CircleShape),
-                            fallback = rememberVectorPainter(Icons.Default.Public)
-                        )
-
-                        is Favicon.Default -> Icon(
-                            favicon.vector,
-                            "",
-                            Modifier.size(12.dp)
-                        )
-                    }
+                    Favicon(story)
                     Spacer(Modifier.size(3.dp))
                     Text(
                         story.urlHost, style = MaterialTheme.typography.labelSmall,
@@ -355,25 +342,25 @@ private fun buildTitleText(item: HnScreenItem.Story): String = remember {
 }
 
 @Composable
-@ThemePreviews
+@PreviewLightDark
 fun PreviewStoryListItem() {
-    AcquisitiveTheme {
+    AcqPreview {
         StoryListItem(
             Modifier,
-            storyItem(1234),
+            previewStoryItem(1234),
             eventSink = {}
         )
     }
 }
 
 @Composable
-@ThemePreviews
+@PreviewLightDark
 fun PreviewStoryList() {
     val paged = remember {
         val nl = LoadState.NotLoading(true)
         flowOf(
             PagingData.from(
-                List(15) { storyItem(it) },
+                List(15) { previewStoryItem(it) },
                 sourceLoadStates = LoadStates(nl, nl, nl),
                 mediatorLoadStates = LoadStates(nl, nl, nl),
             )
@@ -384,25 +371,7 @@ fun PreviewStoryList() {
     val state = remember {
         StoryListScreen.StoryListState(false, FetchMode.TOP, paged) {}
     }
-    AcquisitiveTheme {
+    AcqPreview {
         StoryListUi(state)
     }
 }
-
-private fun storyItem(id: Int): HnScreenItem.Story = HnScreenItem.Story(
-    id = ItemId(id),
-    title = "Archimedes, Vitruvius, and Leonardo: The Odometer Connection (2020)",
-    isHot = true,
-    score = 950,
-    urlHost = "github.com",
-    favicon = Favicon.Default(Icons.Default.Public),
-    numChildren = 121 + id,
-    authorInfo = Pair(
-        DeferredFormattedString.Constant("%s"),
-        DeferredText.Constant("19h • JvmName")
-    ),
-    isDead = false,
-    isDeleted = false,
-    titleSuffix = "💼",
-    rank = "$id."
-)
