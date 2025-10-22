@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS CommentEntity (
     rank INTEGER AS Int NOT NULL ,
     expanded INTEGER AS Boolean NOT NULL DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS Comment_parentId_rank ON CommentEntity(parent, rank);
+CREATE INDEX IF NOT EXISTS Comment_parent_expanded_rank ON CommentEntity(parent, expanded, rank);
+CREATE INDEX IF NOT EXISTS Comment_kids ON CommentEntity(kids);
+CREATE INDEX IF NOT EXISTS Comment_expanded ON CommentEntity(expanded);
 
 
 insertComment:
@@ -26,16 +28,21 @@ updateExpanded {
 UPDATE CommentEntity
 SET expanded =
     CASE
-        WHEN :expanded IS NOT NULL THEN :expanded
+        WHEN :expanded NOTNULL THEN :expanded
         ELSE IIF(expanded, FALSE, TRUE)
     END
 WHERE id = :id;
 
-SELECT 
+SELECT
     expanded,
     IIF(expanded, kids, NULL) AS 'children',
-    IIF(expanded AND kids IS NOT NULL,
-        (SELECT COUNT(*) FROM CommentEntity c WHERE INSTR(kids, c.id) > 0),
+    IIF(
+        expanded
+            AND kids NOTNULL
+            AND kids <> '',
+        (SELECT COUNT(*)
+            FROM CommentEntity c1
+            JOIN CommentEntity c2 ON c1.id = c2.parent),
         0
     ) AS 'childrenCountInDb'
 FROM CommentEntity WHERE id = :id;
@@ -47,11 +54,14 @@ WITH RECURSIVE ChildComments AS (
     FROM CommentEntity
     WHERE parent = :parentStoryId
     UNION ALL
-    SELECT CommentEntity.*, (ChildComments.depth + 1) AS depth, (ChildComments.sortOrder || '.' || printf('%03d', CommentEntity.rank)) AS sortOrder
+    SELECT
+        CommentEntity.*,
+        (ChildComments.depth + 1) AS depth,
+        (ChildComments.sortOrder || '.' || printf('%03d', CommentEntity.rank)) AS sortOrder
     FROM CommentEntity
     JOIN ChildComments ON CommentEntity.parent = ChildComments.id
-    WHERE ChildComments.depth = 0
-        OR CommentEntity.expanded = TRUE
+    WHERE (ChildComments.depth + 1) = 0
+        OR ChildComments.expanded = TRUE
 )
 SELECT * FROM ChildComments
 ORDER BY sortOrder, rank;
@@ -68,8 +78,6 @@ WITH RECURSIVE CommentsToDelete AS (
 )
 DELETE FROM CommentEntity
 WHERE id IN (SELECT id FROM CommentsToDelete);
-
-
 
 -- countPagingComments:
 -- WITH RECURSIVE comment_tree AS (

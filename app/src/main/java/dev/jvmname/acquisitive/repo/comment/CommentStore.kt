@@ -14,18 +14,19 @@ import dev.jvmname.acquisitive.network.model.ItemId
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlin.collections.isNotEmpty
 
 @Inject
 class CommentStore(private val db: CommentQueries) {
+
     fun refresh(
         parent: Pair<HnItem?, CommentEntity?>,
         children: List<CommentEntity>,
     ) = db.transaction {
-        require((parent.first != null) xor (parent.second != null)) { "either HnItem or CommentEntity must be non-null" }
+        val (parentItem, parentComment) = parent
+        require((parentItem != null) xor (parentComment != null)) { "either HnItem or CommentEntity must be non-null" }
         when {
-            parent.first != null -> db.deleteCommentsForParent(parent.first!!.id)
-            parent.second != null -> db.insertComment(parent.second!!)
+            parentItem != null -> db.deleteCommentsForParent(parentItem.id)
+            parentComment != null -> db.insertComment(parentComment)
         }
         children.fastForEach {
             db.insertComment(it)
@@ -33,7 +34,9 @@ class CommentStore(private val db: CommentQueries) {
     }
 
     fun observeComments(parentId: ItemId): Flow<List<ObserveComments>> {
-        return db.observeComments(parentId).asFlow().mapToList(Dispatchers.IO)
+        return db.observeComments(parentId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
     }
 
     suspend fun updateExpanded(id: ItemId, overrideExpanded: Boolean? = null): UpdateExpanded {
@@ -49,7 +52,6 @@ class CommentStore(private val db: CommentQueries) {
     ) {
         if (!expanded) return
         db.transaction {
-            db.deleteCommentsForParent(parentCommentId)
             db.updateExpanded(
                 id = parentCommentId, expanded = if (expanded) 1 else 0
             ).executeAsOne()

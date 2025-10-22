@@ -1,4 +1,4 @@
-package dev.jvmname.acquisitive.util
+  package dev.jvmname.acquisitive.util
 
 import android.content.Context
 import androidx.compose.runtime.Stable
@@ -27,6 +27,7 @@ class MultiFormattedDeferredText(
         val resolved = formatArgs.map {
             when (it) {
                 is FormattedDeferredText -> it.resolve(context)
+                is DeferredText -> it.resolve(context)
                 else -> it
             }
         }

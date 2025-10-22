@@ -41,6 +41,7 @@ sealed interface HnScreenItem {
         val indentDepth: Dp,
         val indentColor: Color,
         val expanded: Boolean,
+        val expandable: Boolean,
         val rank: Int,
     ) : HnScreenItem
 }
