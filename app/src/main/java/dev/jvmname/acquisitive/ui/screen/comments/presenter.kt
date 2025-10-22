@@ -37,7 +37,7 @@ class CommentListPresenter(
     private val repo: CommentRepository,
     private val storyRepo: StoryRepository,
     private val storyConverter: StoryScreenItemConverter,
-    private val commentConverter: CommentScreenItemConverter,
+    private val commentConverterFactory: CommentScreenItemConverter.Factory,
     private val intentCreator: IntentCreator,
     @Assisted private val screen: CommentListScreen,
     @Assisted private val navigator: Navigator,
@@ -50,6 +50,15 @@ class CommentListPresenter(
 
     @Composable
     override fun present(): CommentListScreen.CommentListState {
+        val isDark = isSystemInDarkTheme()
+        val colorScheme = MaterialTheme.colorScheme
+        val commentConverter = remember(isDark) {
+            commentConverterFactory(
+                indentColorProvider = { colorScheme.indent(it, isDark) },
+                markdownProvider = { rememberMarkdownState(it) }
+            )
+        }
+
         val presenterScope = rememberRetainedCoroutineScope()
         var isRefreshing by remember { mutableStateOf(true) }
         val isDark = isSystemInDarkTheme()
@@ -62,12 +71,7 @@ class CommentListPresenter(
 
         val comments by remember(screen.parentItemId) {
             repo.observeComments(screen.parentItemId)
-                .mapList {
-                    commentConverter(
-                        it,
-                        { colorScheme.indent(it, isDark) }
-                    )
-                }
+                .mapList { commentConverter(it) }
         }.collectAsRetainedState(emptyList(), Dispatchers.IO)
 
         if (isRefreshing) {

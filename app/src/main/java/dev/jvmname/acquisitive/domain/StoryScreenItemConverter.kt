@@ -10,39 +10,27 @@ import dev.jvmname.acquisitive.R
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.network.model.HnItem
 import dev.jvmname.acquisitive.network.model.descendants
-import dev.jvmname.acquisitive.network.model.getDisplayedTitle
 import dev.jvmname.acquisitive.network.model.score
 import dev.jvmname.acquisitive.network.model.url
 import dev.jvmname.acquisitive.repo.story.RankedStory
 import dev.jvmname.acquisitive.ui.types.Favicon
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
-import dev.jvmname.acquisitive.util.withMultiFormatArgs
 import dev.zacsweers.metro.Inject
-import kotlinx.datetime.DateTimePeriod
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.periodUntil
-import kotlin.time.Clock
 
 @Inject
-class StoryScreenItemConverter() {
+class StoryScreenItemConverter() : ItemConverter() {
 
     operator fun invoke(ranked: RankedStory, fetchMode: FetchMode): HnScreenItem.Story {
         val story = ranked.item
         require(story !is HnItem.Comment) { "use CommentScreenItemConverter instead for ${story.id}" }
 
-        val time = story.time
-            .periodUntil(Clock.System.now(), TimeZone.currentSystemDefault())
-            .toAbbreviatedDuration()
+        val time = formatTime(story.time)
 
-        val author = DeferredFormattedString.Resource(R.string.time_author)
-            .withFormatArgs(time, story.by.orEmpty())
-        val authorInfo = if (story.dead == true) {
-            DeferredFormattedString.Resource(R.string.dead)
-                .withMultiFormatArgs(author)
-        } else {
-            author
-        }
 
+        val author = formatAuthor(
+            DeferredFormattedString.Resource(R.string.time_author)
+                .withFormatArgs(time, story.by.orEmpty()), story.dead
+        )
         val urlHost = story.url?.let(::extractUrlHost)
 
         return HnScreenItem.Story(
@@ -57,7 +45,7 @@ class StoryScreenItemConverter() {
                 else -> Favicon.Default(Icons.Default.Public)
             },
             numChildren = story.descendants ?: 0,
-            author = authorInfo,
+            author = author,
             time = time,
             isDeleted = story.deleted ?: false,
             isDead = story.dead ?: false,
@@ -72,7 +60,6 @@ class StoryScreenItemConverter() {
     }
 
     companion object {
-
         private const val HOT_THRESHOLD_HIGH = 900
         private const val HOT_THRESHOLD_NORMAL = 300
         private const val HOT_THRESHOLD_LOW = 30
@@ -85,17 +72,6 @@ class StoryScreenItemConverter() {
                 else -> HOT_THRESHOLD_NORMAL
             }
 
-        internal fun DateTimePeriod.toAbbreviatedDuration(): String = when {
-            years > 0 -> "${years}y"
-            months > 0 -> "${months}mo"
-            days >= 7 -> "${days / 7}w"
-            days > 0 -> "${days}d"
-            hours > 0 -> "${hours}h"
-            minutes > 0 -> "${minutes}m"
-            seconds > 10 -> "${seconds}s"
-            else -> "<1s"
-        }
-
         @VisibleForTesting
         internal fun extractUrlHost(url: String): String = try {
             if (url.isBlank()) ""
@@ -107,4 +83,12 @@ class StoryScreenItemConverter() {
             ""
         }
     }
+}
+
+private fun HnItem.getDisplayedTitle() = when (this) {
+    is HnItem.Comment -> text.orEmpty()
+    is HnItem.Job -> title
+    is HnItem.Poll -> title
+    is HnItem.PollOption -> text.orEmpty()
+    is HnItem.Story -> title
 }

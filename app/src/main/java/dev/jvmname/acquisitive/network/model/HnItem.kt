@@ -109,13 +109,6 @@ val HnItem.score: Int
         is HnItem.Story -> score
     }
 
-fun HnItem.getDisplayedTitle() = when (this) {
-    is HnItem.Comment -> text.orEmpty()
-    is HnItem.Job -> title
-    is HnItem.Poll -> title
-    is HnItem.PollOption -> text.orEmpty()
-    is HnItem.Story -> title
-}
 
 val HnItem.url: String?
     get() = when (this) {

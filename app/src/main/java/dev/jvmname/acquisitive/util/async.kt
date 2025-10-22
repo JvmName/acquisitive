@@ -21,7 +21,7 @@ import java.io.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-fun <I, O> Flow<List<I>>.mapList(transform: (I) -> O): Flow<List<O>> = map { it.fastMap(transform) }
+inline fun <I, O> Flow<List<I>>.mapList(crossinline transform: (I) -> O): Flow<List<O>> = map { it.fastMap(transform) }
 
 //https://androidstudygroup.slack.com/archives/C03MHQ3NU/p1666367020309989
 suspend fun <T, R> Collection<T>.fetchAsync(
