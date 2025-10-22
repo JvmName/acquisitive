@@ -1,10 +1,12 @@
 package dev.jvmname.acquisitive.ui.types
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import com.backbase.deferredresources.DeferredText
+import com.mikepenz.markdown.model.MarkdownState
 import dev.drewhamilton.poko.Poko
 import dev.jvmname.acquisitive.network.model.ItemId
 
@@ -33,7 +35,7 @@ sealed interface HnScreenItem {
     @Poko
     class Comment(
         override val id: ItemId,
-        val text: String,
+        val text: @Composable () -> MarkdownState,
         val time: String,
         val author: DeferredText,
         val numChildren: Int,

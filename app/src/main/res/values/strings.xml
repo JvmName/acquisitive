@@ -2,7 +2,7 @@
     <string name="app_name">Acquisitive</string>
     <string name="stories_dropdown">%1$s Stories</string>
     <string name="time_author">%1$s • %2$s</string>
-    <string name="dead">[dead]\n %1$s</string>
+    <string name="dead">[dead] %1$s</string>
 
     <string-array name="fetch_mode">
         <item>Top</item>

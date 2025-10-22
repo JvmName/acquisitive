@@ -69,3 +69,4 @@ square-moshiSealedCodegen = { module = "dev.zacsweers.moshix:moshi-sealed-codege
 square-logcat = "com.squareup.logcat:logcat:0.4"
 
 deferredResource = "com.backbase.oss.deferredresources:deferred-resources-compose-adapter:1.6.1"
+markdown = "com.mikepenz:multiplatform-markdown-renderer-m3:0.37.0"

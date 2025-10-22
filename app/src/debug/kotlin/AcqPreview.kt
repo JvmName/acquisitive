@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import com.backbase.deferredresources.DeferredText
+import com.mikepenz.markdown.model.rememberMarkdownState
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.ui.theme.AcquisitiveTheme
 import dev.jvmname.acquisitive.ui.theme.indent
@@ -44,7 +45,16 @@ fun previewComment(
 ): HnScreenItem.Comment {
     return HnScreenItem.Comment(
         id = ItemId(id),
-        text = "This is a sample comment at depth $depth with some example text. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        text = { //language=Markdown
+            rememberMarkdownState(
+                content =
+                    if (id % 3 == 0) """# Title 
+                        |This is a _sample comment_ at depth `$depth` with < **some example text** >. 
+                        |### Subtitle 
+                        |Lorem ipsum dolor sit amet, consectetur adipiscing elit.""".trimMargin()
+                    else """This is a _sample comment_ at depth `$depth` with **some example text**. Lorem ipsum dolor sit amet, consectetur adipiscing elit."""
+            )
+        },
         time = "${(1..12).random()}:${(10..59).random()} ago",
         author = DeferredText.Constant("Sample Author"),
         numChildren = if (depth < 3) (0..5).random() else 0,
@@ -52,6 +62,7 @@ fun previewComment(
         indentDepth = (depth * 20).dp,
         indentColor = MaterialTheme.colorScheme.indent(depth),
         expanded = expanded,
+        expandable = id % 2 == 0,
         rank = rank
     )
 }

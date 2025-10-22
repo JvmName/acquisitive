@@ -67,6 +67,7 @@ import dev.jvmname.acquisitive.dev.previewStoryItem
 import dev.jvmname.acquisitive.network.model.FetchMode
 import dev.jvmname.acquisitive.ui.common.Favicon
 import dev.jvmname.acquisitive.ui.common.LargeDropdownMenu
+import dev.jvmname.acquisitive.ui.theme.AcqColorScheme
 import dev.jvmname.acquisitive.ui.theme.hotColor
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import dev.jvmname.acquisitive.util.capitalize
@@ -74,8 +75,6 @@ import dev.zacsweers.metro.AppScope
 import kotlinx.coroutines.flow.flowOf
 import logcat.LogPriority
 import logcat.logcat
-
-private val CELL_HEIGHT = 75.dp
 
 @[Composable CircuitInject(StoryListScreen::class, AppScope::class)]
 fun StoryListUi(state: StoryListScreen.StoryListState, modifier: Modifier = Modifier) {
@@ -151,8 +150,8 @@ private fun BoxScope.Progress(modifier: Modifier) {
             modifier = Modifier
                 .padding(vertical = 24.dp)
                 .align(Alignment.CenterHorizontally),
-            color = MaterialTheme.colorScheme.secondary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            color = AcqColorScheme.secondary,
+            trackColor = AcqColorScheme.surfaceVariant,
         )
     }
 }
@@ -187,7 +186,7 @@ fun StoryListItem(
                         height = Dimension.fillToConstraints
                     }
                     .clip(RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(AcqColorScheme.surfaceVariant)
                     .padding(vertical = 10.dp, horizontal = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -200,14 +199,14 @@ fun StoryListItem(
                 Text(
                     story.score,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (story.isHot) MaterialTheme.colorScheme.hotColor else Color.Unspecified,
+                    color = if (story.isHot) AcqColorScheme.hotColor else Color.Unspecified,
                     fontWeight = if (story.isHot) FontWeight.SemiBold else LocalTextStyle.current.fontWeight
                 )
                 if (story.isHot) {
                     Icon(
                         Icons.Default.LocalFireDepartment,
                         "hot",
-                        tint = MaterialTheme.colorScheme.hotColor,
+                        tint = AcqColorScheme.hotColor,
                     )
                 }
             }
@@ -296,7 +295,7 @@ fun StoryListItem(
                     else Icons.AutoMirrored.Outlined.Comment
 
                     val cachedColor = LocalContentColor.current
-                    val hotColor = MaterialTheme.colorScheme.hotColor
+                    val hotColor = AcqColorScheme.hotColor
                     CompositionLocalProvider(LocalContentColor.providesComputed {
                         if (story.isHot) hotColor
                         else cachedColor

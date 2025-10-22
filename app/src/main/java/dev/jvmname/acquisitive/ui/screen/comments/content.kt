@@ -1,10 +1,8 @@
 package dev.jvmname.acquisitive.ui.screen.comments
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -33,7 +31,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -43,13 +40,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.backbase.deferredresources.DeferredText
 import com.backbase.deferredresources.compose.rememberResolvedString
+import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.m3.markdownTypography
+import com.mikepenz.markdown.model.MarkdownState
+import com.mikepenz.markdown.model.markdownAnimations
+import com.mikepenz.markdown.model.markdownAnnotator
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dev.jvmname.acquisitive.dev.AcqPreview
 import dev.jvmname.acquisitive.dev.previewComment
@@ -57,13 +61,15 @@ import dev.jvmname.acquisitive.dev.previewStoryItem
 import dev.jvmname.acquisitive.network.model.ItemId
 import dev.jvmname.acquisitive.ui.common.Favicon
 import dev.jvmname.acquisitive.ui.screen.comments.CommentListScreen.CommentListState
-import dev.jvmname.acquisitive.ui.theme.Typography
+import dev.jvmname.acquisitive.ui.theme.AcqColorScheme
+import dev.jvmname.acquisitive.ui.theme.AcqTypography
 import dev.jvmname.acquisitive.ui.types.Favicon
 import dev.jvmname.acquisitive.ui.types.HnScreenItem
 import dev.zacsweers.metro.AppScope
+import org.intellij.markdown.MarkdownElementTypes
 
 @[Composable CircuitInject(CommentListScreen::class, AppScope::class)]
-fun CommentListContent(contentState: CommentListState, modifier: Modifier) {
+fun CommentListContent(state: CommentListState, modifier: Modifier) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {},
@@ -72,55 +78,41 @@ fun CommentListContent(contentState: CommentListState, modifier: Modifier) {
             modifier = modifier
                 .padding(top = 16.dp)
                 .padding(paddingValues),
-            isRefreshing = contentState is CommentListState.Loading,
-            onRefresh = {
-                if (contentState !is CommentListState.Full) return@PullToRefreshBox
-                contentState.eventSink(CommentListEvent.Refresh)
-            }
+            isRefreshing = state.isRefreshing,
+            onRefresh = { state.eventSink(CommentListEvent.Refresh) }
         ) {
-            AnimatedContent(contentState) { state ->
-                LazyColumn(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.background)
-                        .fillMaxSize()
-                ) {
-                    when (state) {
-                        is CommentListState.Loading -> {
-                            item(key = 1, contentType = { "loading" }) {
-                                Box {
-                                    Progress(Modifier.padding(top = 16.dp))
-                                }
-                            }
-                        }
-
-                        is CommentListState.Full -> {
-                            val story = state.storyItem
-                            val comments = state.commentItems
-                            item(
-                                key = story.id,
-                                contentType = { "story" }) {
-                                StoryCardItem(
-                                    story = story,
-                                    onStoryClick = { state.eventSink(CommentListEvent.StoryClicked) }
-                                )
-                            }
-                            items(
-                                items = comments,
-                                contentType = { "comments" },
-                                key = { it.id },
-                            ) {
-                                CommentItem(
-                                    comment = it,
-                                    onToggleExpand = {
-                                        state.eventSink(CommentListEvent.ExpandToggled(it))
-                                    })
-                            }
-                        }
+            LazyColumn(
+                modifier = Modifier
+                    .background(AcqColorScheme.background)
+                    .fillMaxSize()
+            ) {
+                state.storyItem?.let { story ->
+                    item(
+                        key = story.id,
+                        contentType = { "story" }) {
+                        StoryCardItem(
+                            modifier = Modifier.animateItem(),
+                            story = story,
+                            onStoryClick = { state.eventSink(CommentListEvent.StoryClicked) }
+                        )
                     }
+                }
+
+                val comments = state.commentItems
+                items(
+                    items = comments,
+                    contentType = { "comments" },
+                    key = { it.id },
+                ) {
+                    CommentItem(
+                        modifier = Modifier.animateItem(),
+                        comment = it,
+                        onToggleExpand = {
+                            state.eventSink(CommentListEvent.ExpandToggled(it))
+                        })
                 }
             }
         }
-
     }
 }
 
@@ -135,8 +127,8 @@ private fun BoxScope.Progress(modifier: Modifier) {
             modifier = Modifier
                 .padding(vertical = 24.dp)
                 .align(Alignment.CenterHorizontally),
-            color = MaterialTheme.colorScheme.secondary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            color = AcqColorScheme.secondary,
+            trackColor = AcqColorScheme.surfaceVariant,
         )
     }
 }
@@ -150,8 +142,8 @@ fun StoryCardItem(
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = AcqColorScheme.surfaceContainer,
+            contentColor = AcqColorScheme.onSurfaceVariant,
         ),
         shape = CutCornerShape(topEnd = 12.dp),
         modifier = modifier
@@ -159,9 +151,12 @@ fun StoryCardItem(
             .wrapContentHeight(),
         onClick = onStoryClick,
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, 8.dp)) {
+        Column(
+            Modifier.padding(horizontal = 16.dp, 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Text(
-                text = story.title, style = Typography.headlineMedium
+                text = story.title, style = AcqTypography.headlineMedium
             )
 
             if (story.urlHost != null) {
@@ -169,7 +164,7 @@ fun StoryCardItem(
                     Favicon(story)
                     Spacer(Modifier.size(3.dp))
                     Text(
-                        text = story.urlHost, style = Typography.labelSmall
+                        text = story.urlHost, style = AcqTypography.labelSmall
                     )
                 }
             }
@@ -180,7 +175,11 @@ fun StoryCardItem(
                     icon = Icons.AutoMirrored.Outlined.Comment, text = story.numChildren.toString()
                 )
                 IconText(icon = Icons.Outlined.AccessTime, text = story.time)
-                IconText(icon = Icons.Outlined.AccountCircle, text = rememberResolvedString(story.author).substringAfter('•').trim()) //laziness
+                IconText(
+                    icon = Icons.Outlined.AccountCircle,
+                    //abject laziness
+                    text = rememberResolvedString(story.author).substringAfter('•').trim()
+                )
             }
         }
     }
@@ -194,13 +193,14 @@ fun CommentItem(
 ) {
     BadgedBox(
         modifier = modifier
-            .clickable {
-                if (comment.numChildren == 0) return@clickable
-                onToggleExpand(comment.id)
-            }
-            .padding(horizontal = 16.dp, vertical = 5.dp), badge = {
-            if (comment.numChildren == 0 || comment.expanded) return@BadgedBox
-            Badge(containerColor = comment.indentColor) {
+            .clickable(enabled = comment.expandable) { onToggleExpand(comment.id) }
+            .padding(horizontal = 16.dp, vertical = 5.dp),
+        badge = {
+            if (!comment.expandable || comment.expanded) return@BadgedBox
+            Badge(
+                containerColor = comment.indentColor,
+                contentColor = AcqColorScheme.onPrimary
+            ) {
                 Text(text = "+${comment.numChildren}")
             }
         }) {
@@ -213,9 +213,8 @@ fun CommentItem(
                 color = comment.indentColor
             )
             Card(
-//                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = AcqColorScheme.surface,
                 ),
                 shape = CutCornerShape(topEnd = 12.dp),
                 modifier = Modifier
@@ -231,26 +230,65 @@ fun CommentItem(
                     ) {
                         Text(
                             text = rememberResolvedString(comment.author),
-                            style = Typography.labelSmall,
+                            style = AcqTypography.labelSmall,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
                             text = comment.time,
-                            style = Typography.labelSmall,
+                            style = AcqTypography.labelSmall,
                         )
                     }
-
-                    Text(
-                        text = AnnotatedString.fromHtml(comment.text),
-                        style = Typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) //todo html / markdown
+                    Markdown(content = comment.text)
                 }
             }
         }
     }
 }
 
+@Composable
+fun Markdown(
+    content: @Composable () -> MarkdownState,
+) {
+    //TODO cache this via D.M.T.
+    val mdtypo = markdownTypography(
+        h1 = AcqTypography.titleSmall,
+        h2 = AcqTypography.titleSmall,
+        h3 = AcqTypography.titleSmall,
+        h4 = AcqTypography.titleSmall,
+        h5 = AcqTypography.titleSmall,
+        h6 = AcqTypography.titleSmall,
+        text = AcqTypography.bodySmall,
+        code = AcqTypography.bodySmall,
+        paragraph = AcqTypography.bodySmall,
+        ordered = AcqTypography.bodySmall,
+        bullet = AcqTypography.bodySmall,
+        list = AcqTypography.bodySmall,
+        quote = AcqTypography.bodySmall + SpanStyle(fontStyle = FontStyle.Italic),
+        textLink = TextLinkStyles(
+            AcqTypography.bodySmall
+                .merge(
+                    fontWeight = FontWeight.Bold,
+                    textDecoration = TextDecoration.Underline
+                ).toSpanStyle()
+        ),
+    )
+    Markdown(
+        modifier = Modifier.padding(top = 4.dp),
+        markdownState = content(),
+        typography = mdtypo,
+        annotator = markdownAnnotator { content, child ->
+            when (child.type) {
+                MarkdownElementTypes.PARAGRAPH -> {
+                    append(content, "\n")
+                    true
+                }
+
+                else -> false
+            }
+        },
+        animations = markdownAnimations(animateTextSize = { this }) //no animations
+    )
+}
 
 @Composable
 fun IconText(modifier: Modifier = Modifier, icon: ImageVector, text: String) {
@@ -262,7 +300,7 @@ fun IconText(modifier: Modifier = Modifier, icon: ImageVector, text: String) {
         Icon(
             icon, "", Modifier.size(16.dp)
         )
-        Text(text = text, style = Typography.labelMedium)
+        Text(text = text, style = AcqTypography.labelMedium)
     }
 }
 
@@ -296,18 +334,10 @@ fun StoryCardPreview() {
 
 @PreviewLightDark
 @Composable
-fun Loading() {
-    AcqPreview {
-        CommentListContent(CommentListState.Loading, Modifier)
-    }
-}
-
-@PreviewLightDark
-@Composable
 private fun CommentListPreview() {
     AcqPreview {
         CommentListContent(
-            contentState = CommentListState.Full(
+            state = CommentListState(
                 isRefreshing = false,
                 storyItem = previewStoryItem(111),
                 commentItems = listOf(
@@ -330,7 +360,7 @@ private fun CommentListPreview() {
 private fun CommentListDeepNestingPreview() {
     AcqPreview {
         CommentListContent(
-            contentState = CommentListState.Full(
+            state = CommentListState(
                 isRefreshing = false,
                 storyItem = previewStoryItem(111),
                 commentItems = listOf(

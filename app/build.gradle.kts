@@ -1,4 +1,4 @@
-plugins {
+    plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -169,7 +169,8 @@ dependencies {
     implementation(libs.coil)
     implementation(libs.coil.okhttp)
     implementation(libs.deferredResource)
+    implementation(libs.markdown)
 
 
-    implementation("io.github.theapache64:rebugger:1.0.0-rc03")
+    implementation("io.github.theapache64:rebugger:1.0.1")
 }

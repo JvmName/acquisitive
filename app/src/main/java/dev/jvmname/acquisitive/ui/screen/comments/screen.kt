@@ -1,5 +1,6 @@
 package dev.jvmname.acquisitive.ui.screen.comments
 
+import androidx.compose.runtime.Immutable
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.screen.Screen
@@ -11,16 +12,13 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class CommentListScreen(val parentItemId: ItemId, val fetchMode: FetchMode) : Screen {
-
-    sealed interface CommentListState : CircuitUiState {
-        object Loading : CommentListState
-        data class Full(
-            val isRefreshing: Boolean,
-            val storyItem: HnScreenItem.Story,
-            val commentItems: List<HnScreenItem.Comment>,
-            val eventSink: (CommentListEvent) -> Unit,
-        ) : CommentListState
-    }
+    @Immutable
+    data class CommentListState(
+        val isRefreshing: Boolean,
+        val storyItem: HnScreenItem.Story?,
+        val commentItems: List<HnScreenItem.Comment>,
+        val eventSink: (CommentListEvent) -> Unit,
+    ) : CircuitUiState
 }
 
 sealed class CommentListEvent : CircuitUiEvent {

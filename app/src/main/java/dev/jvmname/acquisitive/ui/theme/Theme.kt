@@ -1,6 +1,7 @@
 package dev.jvmname.acquisitive.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -34,6 +35,10 @@ fun AcquisitiveTheme(
 }
 
 
-val Typography: Typography
+val AcqTypography: Typography
     @Composable
     get() = MaterialTheme.typography
+
+val AcqColorScheme: ColorScheme
+    @Composable
+    get() = MaterialTheme.colorScheme
